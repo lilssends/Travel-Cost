@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Travel Cost — controle premium de custos de viagem</title>
+<meta name="description" content="Registre, organize e acompanhe os custos das suas viagens e passeios, mesmo offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1D4ED8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="font-link" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+/* ============ DESIGN TOKENS ============ */
+:root{
+  --color-bg:#F6F7F9; --color-surface:#FFFFFF; --color-surface-elevated:#FFFFFF;
+  --color-primary:#1D4ED8; --color-primary-dark:#173A9B; --color-primary-rgb:29,78,216;
+  --color-text:#111827; --color-text-secondary:#667085; --color-border:#E5E7EB;
+  --color-success:#16845B; --color-warning:#B7791F; --color-danger:#C24141;
+  --radius-sm:8px; --radius-md:14px; --radius-lg:22px;
+  --shadow-sm:0 1px 2px rgba(17,24,39,.05), 0 1px 1px rgba(17,24,39,.04);
+  --shadow-md:0 8px 24px rgba(17,24,39,.08);
+  --spacing-xs:4px; --spacing-sm:8px; --spacing-md:16px; --spacing-lg:24px; --spacing-xl:40px;
+  --font-family:"Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-scale:1;
+  --sidebar-w:248px; --topbar-h:64px; --bottomnav-h:64px;
+}
+[data-theme="dark"]{
+  --color-bg:#0B0D10; --color-surface:#13161B; --color-surface-elevated:#1A1F26;
+  --color-primary:#6EA8FE; --color-primary-dark:#8fbcff; --color-primary-rgb:110,168,254;
+  --color-text:#F4F6F8; --color-text-secondary:#A7AFBA; --color-border:#29313A;
+  --color-success:#4CC38A; --color-warning:#E4B95E; --color-danger:#F07171;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow-md:0 10px 28px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--color-bg); color:var(--color-text);
+  font-family:var(--font-family); font-size:calc(15px * var(--font-scale)); line-height:1.5;
+  -webkit-font-smoothing:antialiased; transition:background .2s ease,color .2s ease;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1,h2,h3,h4{font-family:var(--font-family); font-weight:700; letter-spacing:-.01em; margin:0;}
+a{color:inherit;}
+button{font-family:var(--font-family);}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;}}
+::selection{background:rgba(var(--color-primary-rgb),.25);}
+
+:focus-visible{outline:2px solid var(--color-primary); outline-offset:2px; border-radius:6px;}
+
+/* ============ LAYOUT SHELL ============ */
+#app{min-height:100%;}
+.topbar{
+  position:sticky; top:0; z-index:40; height:var(--topbar-h);
+  display:flex; align-items:center; gap:var(--spacing-md);
+  padding:0 var(--spacing-md); background:var(--color-surface);
+  border-bottom:1px solid var(--color-border);
+}
+.topbar .brand{display:flex; align-items:center; gap:8px; font-weight:800; font-size:1.05rem;}
+.topbar .brand .mark{width:26px;height:26px;border-radius:8px;background:var(--color-primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;}
+.topbar .spacer{flex:1;}
+.topbar .icon-btn{position:relative;}
+.sync-pill{
+  display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+  background:var(--color-bg); border:1px solid var(--color-border); font-size:.78rem; color:var(--color-text-secondary);
+  cursor:pointer;
+}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--color-success);}
+.sync-dot.pending{background:var(--color-warning);}
+.sync-dot.error{background:var(--color-danger);}
+.sync-dot.offline{background:var(--color-text-secondary);}
+
+.icon-btn{
+  width:38px;height:38px;border-radius:var(--radius-sm); border:1px solid transparent;
+  background:transparent; color:var(--color-text); display:flex;align-items:center;justify-content:center;
+  cursor:pointer; font-size:1.1rem;
+}
+.icon-btn:hover{background:var(--color-bg);}
+
+.layout{display:flex; min-height:calc(100% - var(--topbar-h));}
+.sidebar{
+  width:var(--sidebar-w); flex:none; background:var(--color-surface); border-right:1px solid var(--color-border);
+  padding:var(--spacing-md); display:none; position:sticky; top:var(--topbar-h); height:calc(100vh - var(--topbar-h));
+}
+@media (min-width:992px){ .sidebar{display:block;} }
+.nav-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm);
+  color:var(--color-text-secondary); font-weight:600; font-size:.92rem; cursor:pointer; margin-bottom:2px;
+}
+.nav-item i{font-size:1.05rem; width:20px; text-align:center;}
+.nav-item:hover{background:var(--color-bg);}
+.nav-item.active{background:rgba(var(--color-primary-rgb),.1); color:var(--color-primary);}
+.nav-section-label{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--color-text-secondary); margin:18px 10px 6px;}
+
+main{flex:1; min-width:0; padding:var(--spacing-md); padding-bottom:calc(var(--bottomnav-h) + 24px);}
+@media (min-width:992px){ main{padding:var(--spacing-lg) var(--spacing-xl); padding-bottom:var(--spacing-xl);} }
+.container-max{max-width:1080px; margin:0 auto;}
+
+.bottom-nav{
+  position:fixed; bottom:0; left:0; right:0; z-index:40; height:var(--bottomnav-h);
+  background:var(--color-surface); border-top:1px solid var(--color-border);
+  display:flex; padding-bottom:env(safe-area-inset-bottom);
+}
+@media (min-width:992px){ .bottom-nav{display:none;} }
+.bottom-nav button{
+  flex:1; background:none; border:none; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; color:var(--color-text-secondary); font-size:.68rem; font-weight:600; cursor:pointer;
+}
+.bottom-nav button i{font-size:1.25rem;}
+.bottom-nav button.active{color:var(--color-primary);}
+
+/* ============ COMPONENTS ============ */
+.card{
+  background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm); padding:var(--spacing-md);
+}
+.card-elevated{background:var(--color-surface-elevated);}
+.stat-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:var(--spacing-sm);}
+@media (min-width:576px){ .stat-grid{grid-template-columns:repeat(4,1fr);} }
+.stat-card{padding:var(--spacing-md);}
+.stat-card .label{font-size:.75rem; color:var(--color-text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+.stat-card .value{font-size:1.5rem; font-weight:800; margin-top:4px; letter-spacing:-.02em;}
+.stat-card .sub{font-size:.78rem; color:var(--color-text-secondary); margin-top:2px;}
+
+.section-title{display:flex; align-items:center; justify-content:space-between; margin:var(--spacing-lg) 0 var(--spacing-sm);}
+.section-title h2{font-size:1.05rem;}
+
+.btn{
+  border-radius:var(--radius-sm); border:1px solid transparent; padding:10px 16px; font-weight:600; font-size:.88rem;
+  cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:transform .08s ease, background .15s ease;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--color-primary); color:#fff;}
+.btn-primary:hover{background:var(--color-primary-dark);}
+.btn-secondary{background:var(--color-bg); color:var(--color-text); border-color:var(--color-border);}
+.btn-secondary:hover{background:var(--color-border);}
+.btn-danger{background:transparent; color:var(--color-danger); border-color:rgba(194,65,65,.35);}
+.btn-danger:hover{background:rgba(194,65,65,.08);}
+.btn-block{width:100%; justify-content:center;}
+.btn-sm{padding:7px 12px; font-size:.8rem;}
+.btn-fab{
+  position:fixed; right:20px; bottom:calc(var(--bottomnav-h) + 20px); z-index:35;
+  width:56px; height:56px; border-radius:50%; background:var(--color-primary); color:#fff; border:none;
+  box-shadow:var(--shadow-md); font-size:1.4rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+@media (min-width:992px){ .btn-fab{bottom:24px;} }
+
+.trip-card{cursor:pointer;}
+.trip-card:hover{border-color:rgba(var(--color-primary-rgb),.4);}
+.trip-card .row1{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+.trip-card h3{font-size:1rem;}
+.trip-card .dest{color:var(--color-text-secondary); font-size:.85rem; margin-top:2px;}
+.trip-card .amount{font-weight:800; font-size:1.05rem; white-space:nowrap;}
+.trip-card .meta{display:flex; gap:10px; margin-top:10px; font-size:.78rem; color:var(--color-text-secondary); flex-wrap:wrap;}
+.badge{
+  display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:.72rem; font-weight:700;
+  background:var(--color-bg); border:1px solid var(--color-border); color:var(--color-text-secondary);
+}
+.badge-ongoing{color:var(--color-primary); border-color:rgba(var(--color-primary-rgb),.3); background:rgba(var(--color-primary-rgb),.08);}
+.badge-finished{color:var(--color-success); border-color:rgba(22,132,91,.25); background:rgba(22,132,91,.08);}
+.badge-planned{color:var(--color-warning); border-color:rgba(183,121,31,.25); background:rgba(183,121,31,.08);}
+.badge-archived{opacity:.7;}
+.trips-grid{display:grid; grid-template-columns:1fr; gap:var(--spacing-sm);}
+@media (min-width:577px){ .trips-grid{grid-template-columns:repeat(2,1fr);} }
+@media (min-width:992px){ .trips-grid{grid-template-columns:repeat(3,1fr);} }
+
+.expense-card{display:flex; flex-direction:column; gap:6px;}
+.expense-card .row1{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+.expense-card .cc{display:flex; align-items:center; gap:8px; font-weight:600; font-size:.92rem;}
+.expense-card .cc .ic{width:30px;height:30px;border-radius:9px;background:var(--color-bg);display:flex;align-items:center;justify-content:center;font-size:1rem;flex:none;}
+.expense-card .amount{font-weight:800;}
+.expense-card .merchant{color:var(--color-text-secondary); font-size:.85rem; padding-left:38px;}
+.expense-card .meta{display:flex; gap:12px; flex-wrap:wrap; font-size:.78rem; color:var(--color-text-secondary); padding-left:38px;}
+.expense-card .meta span{display:flex; align-items:center; gap:4px;}
+.expense-card .actions{display:flex; justify-content:flex-end; gap:4px; margin-top:2px;}
+.expenses-list{display:flex; flex-direction:column; gap:8px;}
+
+.toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:var(--spacing-sm);}
+.search-input-wrap{position:relative; flex:1; min-width:180px;}
+.search-input-wrap i{position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--color-text-secondary);}
+.input, select.input, textarea.input{
+  width:100%; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text);
+  border-radius:var(--radius-sm); padding:10px 12px; font-size:.9rem; font-family:var(--font-family);
+}
+.search-input-wrap .input{padding-left:36px;}
+.input:focus{outline:none; border-color:var(--color-primary); box-shadow:0 0 0 3px rgba(var(--color-primary-rgb),.15);}
+
+.form-group{margin-bottom:var(--spacing-md);}
+.form-group label{display:block; font-size:.8rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:6px;}
+.form-row{display:grid; grid-template-columns:1fr; gap:var(--spacing-md);}
+@media (min-width:640px){ .form-row.cols-2{grid-template-columns:1fr 1fr;} .form-row.cols-3{grid-template-columns:1fr 1fr 1fr;} }
+.form-hint{font-size:.75rem; color:var(--color-text-secondary); margin-top:4px;}
+.form-error{font-size:.75rem; color:var(--color-danger); margin-top:4px; display:none;}
+.form-block-title{font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-secondary); margin:18px 0 8px;}
+.form-block-title:first-child{margin-top:0;}
+
+.empty-state{text-align:center; padding:48px 20px; color:var(--color-text-secondary);}
+.empty-state .ic{font-size:2.4rem; margin-bottom:10px; color:var(--color-border);}
+.empty-state h3{color:var(--color-text); font-size:1rem; margin-bottom:4px;}
+.empty-state p{margin:0 0 16px; font-size:.88rem;}
+
+.skeleton{background:linear-gradient(90deg,var(--color-border) 25%,var(--color-bg) 37%,var(--color-border) 63%); background-size:400% 100%; animation:sk 1.4s ease infinite; border-radius:var(--radius-md); height:78px; margin-bottom:8px;}
+@keyframes sk{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+
+/* Modal */
+.modal-backdrop{position:fixed; inset:0; background:rgba(10,12,16,.5); z-index:80; display:none; align-items:flex-end; justify-content:center;}
+.modal-backdrop.open{display:flex;}
+@media (min-width:640px){ .modal-backdrop{align-items:center;} }
+.modal{
+  background:var(--color-surface); width:100%; max-width:560px; max-height:92vh; overflow-y:auto;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0; padding:var(--spacing-lg); box-shadow:var(--shadow-md);
+  padding-bottom:calc(var(--spacing-lg) + env(safe-area-inset-bottom));
+}
+@media (min-width:640px){ .modal{border-radius:var(--radius-lg); max-height:88vh;} }
+.modal-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--spacing-md);}
+.modal-header h2{font-size:1.15rem;}
+.modal-actions{display:flex; gap:10px; margin-top:var(--spacing-lg); position:sticky; bottom:-1px; background:var(--color-surface); padding-top:8px;}
+.chip-row{display:flex; gap:8px; flex-wrap:wrap;}
+.chip{padding:8px 14px; border-radius:999px; border:1px solid var(--color-border); background:var(--color-bg); font-size:.82rem; font-weight:600; cursor:pointer; color:var(--color-text-secondary);}
+.chip.active{background:rgba(var(--color-primary-rgb),.1); border-color:rgba(var(--color-primary-rgb),.4); color:var(--color-primary);}
+
+.attach-list{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+.attach-chip{display:flex; align-items:center; gap:6px; border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:6px 10px; font-size:.78rem; background:var(--color-bg);}
+.attach-chip button{background:none; border:none; color:var(--color-danger); cursor:pointer; font-size:.9rem; padding:0;}
+
+.toast-stack{position:fixed; bottom:calc(var(--bottomnav-h) + 16px); left:50%; transform:translateX(-50%); z-index:100; display:flex; flex-direction:column; gap:8px; width:min(360px,92vw);}
+@media (min-width:992px){ .toast-stack{bottom:20px;} }
+.toast{background:var(--color-text); color:var(--color-bg); border-radius:var(--radius-sm); padding:12px 14px; font-size:.85rem; box-shadow:var(--shadow-md); animation:toastin .18s ease;}
+[data-theme="dark"] .toast{background:#F4F6F8; color:#0B0D10;}
+.toast .sub{opacity:.75; font-size:.78rem; margin-top:2px;}
+@keyframes toastin{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--color-border); margin-bottom:var(--spacing-md); overflow-x:auto;}
+.tab-btn{padding:10px 14px; background:none; border:none; font-weight:600; font-size:.86rem; color:var(--color-text-secondary); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;}
+.tab-btn.active{color:var(--color-primary); border-color:var(--color-primary);}
+
+.progress-bar{height:8px; border-radius:99px; background:var(--color-bg); overflow:hidden;}
+.progress-bar > div{height:100%; background:var(--color-primary); border-radius:99px;}
+.cc-breakdown-row{display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:.85rem;}
+.cc-breakdown-row .name{width:110px; flex:none; display:flex; align-items:center; gap:6px; color:var(--color-text-secondary);}
+.cc-breakdown-row .bar{flex:1;}
+.cc-breakdown-row .val{width:88px; flex:none; text-align:right; font-weight:600;}
+
+.settings-list .item{display:flex; align-items:center; justify-content:space-between; padding:14px 4px; border-bottom:1px solid var(--color-border);}
+.settings-list .item:last-child{border-bottom:none;}
+.settings-list .item .t{font-weight:600; font-size:.9rem;}
+.settings-list .item .d{font-size:.78rem; color:var(--color-text-secondary); margin-top:2px;}
+
+.switch{position:relative; width:44px; height:26px; flex:none;}
+.switch input{opacity:0; width:0; height:0;}
+.switch .slider{position:absolute; inset:0; background:var(--color-border); border-radius:99px; cursor:pointer; transition:.15s;}
+.switch .slider:before{content:""; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s;}
+.switch input:checked + .slider{background:var(--color-primary);}
+.switch input:checked + .slider:before{transform:translateX(18px);}
+
+.mgmt-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--color-border);}
+.mgmt-row:last-child{border-bottom:none;}
+.mgmt-row .ic{width:34px;height:34px;border-radius:10px;background:var(--color-bg);display:flex;align-items:center;justify-content:center;flex:none;}
+.mgmt-row .info{flex:1; min-width:0;}
+.mgmt-row .info .t{font-weight:600; font-size:.88rem;}
+.mgmt-row .info .d{font-size:.76rem; color:var(--color-text-secondary);}
+.mgmt-row .acts{display:flex; gap:4px;}
+
+.onb-backdrop{position:fixed; inset:0; background:var(--color-bg); z-index:200; display:flex; flex-direction:column;}
+.onb-body{flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:32px;}
+.onb-body .mark{width:64px;height:64px;border-radius:18px;background:var(--color-primary); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.8rem; margin-bottom:20px;}
+.onb-dots{display:flex; gap:6px; justify-content:center; padding:16px;}
+.onb-dots span{width:7px;height:7px;border-radius:50%;background:var(--color-border);}
+.onb-dots span.active{background:var(--color-primary); width:20px; border-radius:99px;}
+.onb-foot{display:flex; justify-content:space-between; padding:20px 24px calc(20px + env(safe-area-inset-bottom));}
+
+@media print{
+  .topbar,.sidebar,.bottom-nav,.btn-fab,.toolbar,.toast-stack,.tabs,.modal-backdrop,.no-print{display:none !important;}
+  body{background:#fff; color:#000;}
+  main{padding:0;}
+  .card{box-shadow:none; border-color:#ddd;}
+}
+.hidden{display:none !important;}
+</style>
+</head>
+<body data-theme="light">
+<div id="app">
+  <header class="topbar">
+    <div class="brand"><span class="mark"><i class="bi bi-airplane-fill"></i></span><span>Travel Cost</span></div>
+    <div class="spacer"></div>
+    <button class="sync-pill" id="syncPill" title="Status de sincronização">
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="syncLabel">Somente neste dispositivo</span>
+    </button>
+    <button class="icon-btn" id="btnSearch" aria-label="Pesquisar"><i class="bi bi-search"></i></button>
+    <button class="icon-btn" id="btnGoSettings" aria-label="Configurações"><i class="bi bi-gear"></i></button>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <nav>
+        <div class="nav-item" data-nav="dashboard"><i class="bi bi-grid-1x2"></i>Dashboard</div>
+        <div class="nav-item" data-nav="trips"><i class="bi bi-suitcase"></i>Viagens</div>
+        <div class="nav-item" data-nav="settings"><i class="bi bi-gear"></i>Configurações</div>
+        <div class="nav-section-label">Atalhos</div>
+        <div class="nav-item" id="sideNewTrip"><i class="bi bi-plus-circle"></i>Nova viagem</div>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="container-max" id="view-dashboard"></div>
+      <div class="container-max hidden" id="view-trips"></div>
+      <div class="container-max hidden" id="view-trip-detail"></div>
+      <div class="container-max hidden" id="view-settings"></div>
+    </main>
+  </div>
+
+  <nav class="bottom-nav">
+    <button data-nav="dashboard"><i class="bi bi-grid-1x2"></i>Início</button>
+    <button data-nav="trips"><i class="bi bi-suitcase"></i>Viagens</button>
+    <button id="bottomNewExpense"><i class="bi bi-plus-circle-fill"></i>Despesa</button>
+    <button id="bottomReports"><i class="bi bi-bar-chart"></i>Relatórios</button>
+    <button data-nav="settings"><i class="bi bi-gear"></i>Config.</button>
+  </nav>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- Modal: Trip form -->
+<div class="modal-backdrop" id="modalTrip">
+  <div class="modal">
+    <div class="modal-header"><h2 id="tripModalTitle">Nova viagem</h2><button class="icon-btn" data-close="modalTrip"><i class="bi bi-x-lg"></i></button></div>
+    <form id="tripForm">
+      <input type="hidden" id="tripId">
+      <div class="form-block-title">Informações principais</div>
+      <div class="form-group">
+        <label for="tripName">Nome da viagem</label>
+        <input class="input" id="tripName" required placeholder="Ex.: Férias no Rio">
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label for="tripShortName">Apelido</label>
+          <input class="input" id="tripShortName" placeholder="Ex.: Rio2026">
+          <div class="form-hint">Usado como nome de pasta. Caracteres inválidos são removidos automaticamente.</div>
+        </div>
+        <div class="form-group">
+          <label for="tripType">Tipo</label>
+          <select class="input" id="tripType">
+            <option value="viagem">Viagem</option>
+            <option value="passeio">Passeio</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label for="tripDestination">Destino</label>
+          <input class="input" id="tripDestination" placeholder="Ex.: Rio de Janeiro, Brasil">
+        </div>
+        <div class="form-group">
+          <label for="tripCurrency">Moeda principal</label>
+          <select class="input" id="tripCurrency">
+            <option>BRL</option><option>USD</option><option>EUR</option><option>ARS</option><option>CLP</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label for="tripStart">Data de início</label>
+          <input class="input" type="date" id="tripStart" required>
+        </div>
+        <div class="form-group">
+          <label for="tripEnd">Data de término</label>
+          <input class="input" type="date" id="tripEnd" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="tripNotes">Observações</label>
+        <textarea class="input" id="tripNotes" rows="2" placeholder="Opcional"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="modalTrip">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-block">Salvar viagem</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Expense form -->
+<div class="modal-backdrop" id="modalExpense">
+  <div class="modal">
+    <div class="modal-header"><h2 id="expModalTitle">Nova despesa</h2><button class="icon-btn" data-close="modalExpense"><i class="bi bi-x-lg"></i></button></div>
+    <form id="expenseForm">
+      <input type="hidden" id="expId"><input type="hidden" id="expTripId">
+      <div class="form-block-title">O que foi pago?</div>
+      <div class="form-group">
+        <label for="expDescription">Descrição</label>
+        <input class="input" id="expDescription" required placeholder="Ex.: Almoço no restaurante">
+      </div>
+      <div class="form-block-title">Quanto?</div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label for="expCurrency">Moeda</label>
+          <select class="input" id="expCurrency"><option>BRL</option><option>USD</option><option>EUR</option><option>ARS</option><option>CLP</option></select>
+        </div>
+        <div class="form-group">
+          <label for="expAmount">Valor</label>
+          <input class="input" id="expAmount" required inputmode="decimal" placeholder="0,00">
+        </div>
+      </div>
+      <div class="form-block-title">Quando?</div>
+      <div class="form-row cols-2">
+        <div class="form-group"><label for="expDate">Data do movimento</label><input class="input" type="date" id="expDate" required></div>
+        <div class="form-group"><label for="expTime">Hora</label><input class="input" type="time" id="expTime"></div>
+      </div>
+      <div class="form-error" id="expDateWarning"></div>
+      <div class="form-block-title">Categoria</div>
+      <div class="form-group">
+        <label for="expCostCenter">Centro de custo</label>
+        <select class="input" id="expCostCenter"></select>
+      </div>
+      <div class="form-block-title">Como foi pago?</div>
+      <div class="form-group">
+        <label for="expPaymentMethod">Forma de pagamento</label>
+        <select class="input" id="expPaymentMethod"></select>
+      </div>
+      <div class="form-block-title">Onde?</div>
+      <div class="form-row cols-2">
+        <div class="form-group"><label for="expMerchant">Estabelecimento</label><input class="input" id="expMerchant" placeholder="Opcional"></div>
+        <div class="form-group"><label for="expCity">Cidade</label><input class="input" id="expCity" placeholder="Opcional"></div>
+      </div>
+      <div class="form-block-title">Comprovantes</div>
+      <div class="form-group">
+        <div class="chip-row">
+          <label class="btn btn-secondary btn-sm" for="expFileCamera"><i class="bi bi-camera"></i> Tirar foto</label>
+          <input type="file" id="expFileCamera" accept="image/*" capture="environment" class="hidden">
+          <label class="btn btn-secondary btn-sm" for="expFileAny"><i class="bi bi-paperclip"></i> Anexar arquivo</label>
+          <input type="file" id="expFileAny" accept="image/*,.pdf" multiple class="hidden">
+        </div>
+        <label style="display:flex; align-items:center; gap:6px; font-size:.78rem; color:var(--color-text-secondary); cursor:pointer; margin:4px 0 0;">
+          <input type="checkbox" id="expBurstMode"> Modo rajada (várias fotos seguidas, para comprovantes com várias páginas)
+        </label>
+        <div class="attach-list" id="expAttachList"></div>
+      </div>
+      <div class="form-block-title">Observações</div>
+      <div class="form-group"><textarea class="input" id="expNotes" rows="2" placeholder="Campo livre"></textarea></div>
+      <div class="modal-actions" style="flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" data-close="modalExpense">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;">Salvar</button>
+        <button type="submit" class="btn btn-secondary" id="expSaveAddAnother" style="flex:1;">Salvar e adicionar outra</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Cost center form -->
+<div class="modal-backdrop" id="modalCC">
+  <div class="modal">
+    <div class="modal-header"><h2 id="ccModalTitle">Novo centro de custo</h2><button class="icon-btn" data-close="modalCC"><i class="bi bi-x-lg"></i></button></div>
+    <form id="ccForm">
+      <input type="hidden" id="ccId">
+      <div class="form-group"><label for="ccName">Nome</label><input class="input" id="ccName" required></div>
+      <div class="form-group"><label for="ccIcon">Ícone (emoji)</label><input class="input" id="ccIcon" maxlength="4" placeholder="🍽"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="modalCC">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Payment method form -->
+<div class="modal-backdrop" id="modalPM">
+  <div class="modal">
+    <div class="modal-header"><h2 id="pmModalTitle">Nova forma de pagamento</h2><button class="icon-btn" data-close="modalPM"><i class="bi bi-x-lg"></i></button></div>
+    <form id="pmForm">
+      <input type="hidden" id="pmId">
+      <div class="form-group">
+        <label for="pmType">Tipo</label>
+        <select class="input" id="pmType">
+          <option value="credito">Cartão de crédito</option>
+          <option value="debito">Cartão de débito</option>
+          <option value="pix">PIX</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="voucher">Voucher</option>
+        </select>
+      </div>
+      <div class="form-group"><label for="pmNickname">Apelido</label><input class="input" id="pmNickname" required placeholder="Ex.: Visa pessoal"></div>
+      <div id="pmCardFields">
+        <div class="form-row cols-2">
+          <div class="form-group"><label for="pmBank">Banco</label><input class="input" id="pmBank"></div>
+          <div class="form-group"><label for="pmBrand">Bandeira</label><input class="input" id="pmBrand" placeholder="Visa, Master..."></div>
+        </div>
+        <div class="form-group"><label for="pmLast4">Últimos 4 dígitos</label><input class="input" id="pmLast4" maxlength="4" inputmode="numeric"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close="modalPM">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="modal-backdrop" id="modalConfirm">
+  <div class="modal" style="max-width:420px;">
+    <h2 id="confirmTitle">Confirmar?</h2>
+    <p id="confirmBody" style="color:var(--color-text-secondary); font-size:.9rem;"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" data-close="modalConfirm" style="flex:1;">Cancelar</button>
+      <button type="button" class="btn btn-danger" id="confirmActionBtn" style="flex:1; border:1px solid var(--color-danger);">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Search modal -->
+<div class="modal-backdrop" id="modalSearch">
+  <div class="modal">
+    <div class="modal-header"><h2>Pesquisar despesas</h2><button class="icon-btn" data-close="modalSearch"><i class="bi bi-x-lg"></i></button></div>
+    <div class="search-input-wrap"><i class="bi bi-search"></i><input class="input" id="globalSearchInput" placeholder="Descrição, estabelecimento, cidade, categoria..."></div>
+    <div id="globalSearchResults" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- Onboarding -->
+<div class="onb-backdrop hidden" id="onboarding">
+  <div class="onb-body" id="onbBody"></div>
+  <div class="onb-dots" id="onbDots"></div>
+  <div class="onb-foot">
+    <button class="btn btn-secondary" id="onbSkip">Pular</button>
+    <button class="btn btn-primary" id="onbNext">Continuar</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================================
+   TRAVEL COST PREMIUM — app.js (embutido)
+   Arquitetura: DB (IndexedDB) -> State/Repos -> Views -> Event handlers
+   ========================================================================= */
+
+/* ---------------- Utils ---------------- */
+const $ = (sel, root) => (root||document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root||document).querySelectorAll(sel));
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);}));
+const nowIso = () => new Date().toISOString();
+function sanitizeFolderName(s){
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'') || 'Viagem';
+}
+function fmtMoney(amountMinor, currency){
+  currency = currency || 'BRL';
+  const v = (amountMinor||0)/100;
+  try{
+    return new Intl.NumberFormat('pt-BR',{style:'currency',currency}).format(v);
+  }catch(e){ return 'R$ ' + v.toFixed(2).replace('.',','); }
+}
+function parseMoneyToMinor(str){
+  if(!str) return 0;
+  let s = String(str).trim().replace(/[^\d,.-]/g,'');
+  if(s.includes(',') && s.includes('.')){ s = s.replace(/\./g,'').replace(',','.'); }
+  else if(s.includes(',')){ s = s.replace(',','.'); }
+  const v = parseFloat(s);
+  return isNaN(v) ? 0 : Math.round(v*100);
+}
+function fmtDateBR(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function todayISODate(){ return new Date().toISOString().slice(0,10); }
+function nowTimeHM(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- Toasts ---------------- */
+function toast(msg, sub){
+  const stack = $('#toastStack');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<div>${escapeHtml(msg)}</div>${sub?`<div class="sub">${escapeHtml(sub)}</div>`:''}`;
+  stack.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .25s'; setTimeout(()=>el.remove(),260); }, 2600);
+}
+
+/* ---------------- IndexedDB layer ---------------- */
+const DB_NAME = 'travelcost-db';
+const DB_VERSION = 2;
+let dbInstance = null;
+
+function openDB(){
+  return new Promise((resolve, reject) => {
+    if(dbInstance) return resolve(dbInstance);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('trips')) db.createObjectStore('trips', {keyPath:'id'});
+      if(!db.objectStoreNames.contains('expenses')){
+        const s = db.createObjectStore('expenses', {keyPath:'id'});
+        s.createIndex('tripId','tripId',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('costCenters')) db.createObjectStore('costCenters', {keyPath:'id'});
+      if(!db.objectStoreNames.contains('paymentMethods')) db.createObjectStore('paymentMethods', {keyPath:'id'});
+      if(!db.objectStoreNames.contains('attachments')){
+        const s = db.createObjectStore('attachments', {keyPath:'id'});
+        s.createIndex('expenseId','expenseId',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('memories')){
+        const s = db.createObjectStore('memories', {keyPath:'id'});
+        s.createIndex('tripId','tripId',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', {keyPath:'key'});
+      if(!db.objectStoreNames.contains('syncQueue')) db.createObjectStore('syncQueue', {keyPath:'id'});
+    };
+    req.onsuccess = (e) => { dbInstance = e.target.result; resolve(dbInstance); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+function tx(storeName, mode){ return openDB().then(db => db.transaction(storeName, mode).objectStore(storeName)); }
+function dbGetAll(storeName){ return tx(storeName,'readonly').then(store => new Promise((res,rej)=>{ const r=store.getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
+function dbGet(storeName,key){ return tx(storeName,'readonly').then(store => new Promise((res,rej)=>{ const r=store.get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
+function dbPut(storeName,val){ return tx(storeName,'readwrite').then(store => new Promise((res,rej)=>{ const r=store.put(val); r.onsuccess=()=>res(val); r.onerror=()=>rej(r.error); })); }
+function dbDelete(storeName,key){ return tx(storeName,'readwrite').then(store => new Promise((res,rej)=>{ const r=store.delete(key); r.onsuccess=()=>res(true); r.onerror=()=>rej(r.error); })); }
+function dbGetByIndex(storeName, indexName, value){
+  return tx(storeName,'readonly').then(store => new Promise((res,rej)=>{
+    const idx = store.index(indexName); const r = idx.getAll(value);
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  }));
+}
+
+/* ---------------- Settings repo ---------------- */
+const DEFAULT_SETTINGS = {
+  theme:'system', fontFamily:'Montserrat', fontSize:'normal',
+  expenseSort:'movementDate', expenseSortDir:'desc',
+  cloudProvider:'none', deviceId:null, onboardingDone:false, fontsCached:{},
+  sharedFolderProvider:'none', sharedFolderLink:'', sharedFolderRootName:'Travel Cost',
+  localFolderLinked:false
+};
+let SETTINGS = {...DEFAULT_SETTINGS};
+async function loadSettings(){
+  const rows = await dbGetAll('settings');
+  const map = {}; rows.forEach(r=>{ if(r.key!=='localFolderHandle') map[r.key]=r.value; });
+  SETTINGS = {...DEFAULT_SETTINGS, ...map};
+  if(!SETTINGS.deviceId){ SETTINGS.deviceId = uuid(); await saveSetting('deviceId', SETTINGS.deviceId); }
+}
+async function saveSetting(key, value){ SETTINGS[key]=value; await dbPut('settings',{key,value}); }
+
+/* ---------------- Seed defaults ---------------- */
+const DEFAULT_COST_CENTERS = [
+  ['Transporte','🚗'],['Passagens','✈️'],['Hospedagem','🏨'],['Alimentação','🍽'],
+  ['Passeios','🎟'],['Ingressos','🎫'],['Estacionamento','🅿️'],['Combustível','⛽'],
+  ['Pedágios','🛣'],['Compras','🛍'],['Saúde','💊'],['Comunicação','📶'],
+  ['Documentação','📄'],['Outros','🔖']
+];
+const DEFAULT_PAYMENT_METHODS = [ {type:'dinheiro', nickname:'Dinheiro'} ];
+
+async function seedIfEmpty(){
+  const ccs = await dbGetAll('costCenters');
+  if(ccs.length===0){
+    for(const [name,icon] of DEFAULT_COST_CENTERS){
+      await dbPut('costCenters', {id:uuid(), name, icon, active:true, createdAt:nowIso()});
+    }
+  }
+  const pms = await dbGetAll('paymentMethods');
+  if(pms.length===0){
+    for(const p of DEFAULT_PAYMENT_METHODS){
+      await dbPut('paymentMethods', {id:uuid(), type:p.type, nickname:p.nickname, bank:'', brand:'', last4:'', active:true, createdAt:nowIso()});
+    }
+  }
+}
+
+/* ---------------- Theme & typography ---------------- */
+function applyTheme(){
+  let theme = SETTINGS.theme;
+  if(theme==='system') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light';
+  document.body.setAttribute('data-theme', theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', theme==='dark' ? '#0B0D10' : '#1D4ED8');
+}
+const FONT_SIZE_SCALE = {pequeno:.92, normal:1, grande:1.12, muitogrande:1.26};
+function applyFontSize(){
+  const scale = FONT_SIZE_SCALE[SETTINGS.fontSize] ?? 1;
+  document.documentElement.style.setProperty('--font-scale', scale);
+}
+const GOOGLE_FONTS = ['Montserrat','Inter','Roboto','Open Sans','Lato','Poppins','Nunito','Merriweather','Source Sans 3'];
+function applyFontFamily(){
+  const family = SETTINGS.fontFamily || 'Montserrat';
+  const link = $('#font-link');
+  const q = family.replace(/ /g,'+');
+  link.href = `https://fonts.googleapis.com/css2?family=${q}:wght@400;500;600;700;800&display=swap`;
+  document.documentElement.style.setProperty('--font-family', `"${family}",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`);
+}
+
+/* ---------------- Armazenamento: pasta local vinculada (sem OAuth) ----------------
+   Em vez de OAuth, o usuário pode:
+   1) Colar o link da pasta compartilhada (Drive/OneDrive) — usado apenas como
+      referência/atalho ("Abrir pasta"). Navegadores NÃO permitem que uma página
+      grave arquivos num link de pasta do Drive/OneDrive sem autenticação — essa
+      é uma limitação real da plataforma, não do app (ver README).
+   2) Em navegadores desktop compatíveis (Chrome/Edge), vincular a pasta LOCAL
+      sincronizada pelo cliente Google Drive/OneDrive do próprio sistema
+      operacional, via File System Access API. Nesse caso o app grava os
+      arquivos de verdade nessa pasta, e quem sobe para a nuvem é o cliente de
+      sincronização do Google/Microsoft já instalado no computador — sem OAuth,
+      sem CDN, 100% funcional.
+   Essa configuração é local a este dispositivo (o handle de pasta não pode ser
+   exportado). Em outro dispositivo, a pessoa reconfigura a mesma pasta, ou usa
+   o backup JSON (que carrega o link de referência, mas não o handle). */
+
+const FS_ACCESS_SUPPORTED = 'showDirectoryPicker' in window;
+
+// A pasta escolhida pelo usuário em "Vincular pasta local" É a raiz "Travel Cost".
+// As viagens são criadas diretamente dentro dela — sem repetir o nome da pasta
+// principal como subpasta, o que antes causava "Travel Cost/Travel Cost/...".
+async function pickLocalFolder(){
+  if(!FS_ACCESS_SUPPORTED) return {ok:false, reason:'unsupported'};
+  try{
+    const handle = await window.showDirectoryPicker({id:'travelcost-root', mode:'readwrite'});
+    await dbPut('settings', {key:'localFolderHandle', value:handle});
+    await saveSetting('localFolderLinked', true);
+    return {ok:true, handle};
+  }catch(err){
+    return {ok:false, reason:'cancelled_or_denied'};
+  }
+}
+// Retorna o handle salvo, sem checar/pedir permissão (só olha se existe algo salvo).
+async function getStoredFolderHandleRaw(){
+  if(!FS_ACCESS_SUPPORTED) return null;
+  try{
+    const row = await dbGet('settings','localFolderHandle');
+    return (row && row.value) ? row.value : null;
+  }catch(e){ return null; }
+}
+// Uso geral (gravações): pode solicitar permissão, exige ter partido de um gesto do usuário.
+async function getLocalFolderHandle(){
+  const stored = await getStoredFolderHandleRaw();
+  if(!stored) return null;
+  try{
+    let perm = await stored.queryPermission({mode:'readwrite'});
+    if(perm !== 'granted'){ perm = await stored.requestPermission({mode:'readwrite'}); }
+    if(perm !== 'granted') return null;
+    return stored;
+  }catch(e){ return null; }
+}
+// Uso em exibições passivas (indicador de status): nunca solicita permissão sem gesto do usuário.
+async function peekLocalFolderHandle(){
+  const stored = await getStoredFolderHandleRaw();
+  if(!stored) return null;
+  try{
+    const perm = await stored.queryPermission({mode:'readwrite'});
+    return perm === 'granted' ? stored : null;
+  }catch(e){ return null; }
+}
+// Chamado a partir de um clique do usuário ("Reconectar pasta"): reusa o MESMO
+// handle salvo e só repede a permissão — não abre o seletor de pasta de novo,
+// então nunca cria pasta duplicada nem "esquece" qual pasta era.
+async function reconnectLocalFolder(){
+  const stored = await getStoredFolderHandleRaw();
+  if(!stored) return {ok:false, reason:'no_handle'};
+  try{
+    const perm = await stored.requestPermission({mode:'readwrite'});
+    if(perm === 'granted') return {ok:true, handle: stored};
+    return {ok:false, reason:'denied'};
+  }catch(e){ return {ok:false, reason:e.message}; }
+}
+async function ensureSubdir(rootHandle, parts){
+  let dir = rootHandle;
+  for(const part of parts){ dir = await dir.getDirectoryHandle(part, {create:true}); }
+  return dir;
+}
+// Cria toda a estrutura de pastas da viagem (Despesas/*, Memórias/*, Relatorios, backup)
+// diretamente dentro da pasta vinculada (que já É a "Travel Cost").
+async function createTripFolderStructure(trip){
+  const root = await getLocalFolderHandle();
+  if(!root) return {ok:false, reason:'no_folder_linked'};
+  try{
+    const base = await ensureSubdir(root, [trip.shortName]);
+    await ensureSubdir(base, ['Despesas','Notas Fiscais']);
+    await ensureSubdir(base, ['Despesas','Comprovantes']);
+    await ensureSubdir(base, ['Despesas','Documentos']);
+    await ensureSubdir(base, ['Memórias','Fotos']);
+    await ensureSubdir(base, ['Memórias','Vídeos']);
+    await ensureSubdir(base, ['Relatorios']);
+    await ensureSubdir(base, ['backup']);
+    return {ok:true};
+  }catch(err){ return {ok:false, reason: err.message}; }
+}
+// Grava um Blob dentro de <pasta vinculada>/<viagem>/<subPathParts...>/<fileName>
+async function writeFileToTripFolder(trip, subPathParts, fileName, blob){
+  const root = await getLocalFolderHandle();
+  if(!root) return {ok:false, reason:'no_folder_linked'};
+  try{
+    const rootLabel = SETTINGS.sharedFolderRootName || 'Travel Cost';
+    const dir = await ensureSubdir(root, [trip.shortName, ...subPathParts]);
+    const fileHandle = await dir.getFileHandle(fileName, {create:true});
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return {ok:true, cloudPath: `${rootLabel}/${trip.shortName}/${subPathParts.join('/')}/${fileName}`};
+  }catch(err){ return {ok:false, reason: err.message}; }
+}
+
+function uniqueFileName(prefix, originalName){
+  const ext = (originalName.match(/\.[a-zA-Z0-9]+$/)||[''])[0] || '';
+  const d = new Date();
+  const stamp = d.toISOString().slice(0,19).replace('T','_').replace(/:/g,'-');
+  return `${stamp}_${prefix}_${Math.random().toString(36).slice(2,6)}${ext}`;
+}
+
+async function updateSyncPill(){
+  const dot = $('#syncDot'); const label = $('#syncLabel');
+  if(!navigator.onLine){ dot.className='sync-dot offline'; label.textContent='Offline'; return; }
+  const folder = await peekLocalFolderHandle();
+  if(folder){ dot.className='sync-dot'; label.textContent='Pasta local vinculada'; return; }
+  // Handle salvo mas sem permissão ativa nesta sessão (comum após reabrir o navegador).
+  // Isso NÃO significa que a pasta foi esquecida — só precisa reconectar em Config.
+  const storedHandle = await getStoredFolderHandleRaw();
+  if(storedHandle){ dot.className='sync-dot pending'; label.textContent='Pasta vinculada — toque em Config. para reconectar'; return; }
+  if(SETTINGS.sharedFolderLink){ dot.className='sync-dot pending'; label.textContent='Link salvo (sem gravação automática)'; return; }
+  dot.className='sync-dot'; label.textContent='Somente neste dispositivo';
+}
+window.addEventListener('online', updateSyncPill);
+window.addEventListener('offline', updateSyncPill);
+
+/* ---------------- Router ---------------- */
+let currentTripId = null;
+let currentTripTab = 'resumo';
+function navigate(view, opts){
+  opts = opts||{};
+  $$('.container-max[id^="view-"]').forEach(v=>v.classList.add('hidden'));
+  $(`#view-${view}`).classList.remove('hidden');
+  $$('.nav-item[data-nav], .bottom-nav [data-nav]').forEach(n=>n.classList.toggle('active', n.dataset.nav===view));
+  if(view==='dashboard') renderDashboard();
+  if(view==='trips') renderTripsList();
+  if(view==='trip-detail'){ currentTripId = opts.tripId || currentTripId; currentTripTab = opts.tab || 'resumo'; renderTripDetail(); }
+  if(view==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+$$('[data-nav]').forEach(el=>el.addEventListener('click', ()=>navigate(el.dataset.nav)));
+$('#btnGoSettings').addEventListener('click', ()=>navigate('settings'));
+$('#sideNewTrip').addEventListener('click', ()=>openTripModal());
+$('#bottomNewExpense').addEventListener('click', async ()=>{
+  if(currentTripId){ openExpenseModal(currentTripId); }
+  else{
+    const trips = await dbGetAll('trips');
+    const active = trips.find(t=>t.status!=='archived');
+    if(active){ navigate('trip-detail',{tripId:active.id, tab:'despesas'}); openExpenseModal(active.id); }
+    else { toast('Crie uma viagem primeiro', 'Toque em + Criar viagem'); navigate('trips'); }
+  }
+});
+$('#bottomReports').addEventListener('click', ()=>{
+  if(currentTripId) navigate('trip-detail',{tripId:currentTripId, tab:'relatorio'});
+  else navigate('trips');
+});
+$('#btnSearch').addEventListener('click', ()=>openModal('modalSearch'));
+
+/* ---------------- Modal helpers ---------------- */
+function openModal(id){ $('#'+id).classList.add('open'); }
+function closeModal(id){ $('#'+id).classList.remove('open'); }
+$$('[data-close]').forEach(el=>el.addEventListener('click', ()=>closeModal(el.dataset.close)));
+$$('.modal-backdrop').forEach(el=>el.addEventListener('click', (e)=>{ if(e.target===el) el.classList.remove('open'); }));
+
+function confirmDialog(title, body, onConfirm){
+  $('#confirmTitle').textContent = title;
+  $('#confirmBody').textContent = body;
+  const btn = $('#confirmActionBtn');
+  const clone = btn.cloneNode(true); btn.parentNode.replaceChild(clone, btn);
+  clone.addEventListener('click', ()=>{ closeModal('modalConfirm'); onConfirm(); });
+  openModal('modalConfirm');
+}
+
+/* ---------------- Dashboard ---------------- */
+async function renderDashboard(){
+  const root = $('#view-dashboard');
+  const [trips, expenses] = await Promise.all([dbGetAll('trips'), dbGetAll('expenses')]);
+  const activeExpenses = expenses.filter(e=>!e.deletedAt);
+  const totalAll = activeExpenses.reduce((s,e)=> s + (e.currency==='BRL'? e.amountMinor:0), 0);
+  const withoutReceipt = activeExpenses.filter(e=>!(e.attachments && e.attachments>0)).length;
+  const recentTrips = [...trips].sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt)).slice(0,5);
+  const folder = await peekLocalFolderHandle();
+  const syncLabel = folder ? 'Pasta vinculada' : (SETTINGS.sharedFolderLink ? 'Link salvo' : 'Local');
+
+  root.innerHTML = `
+    <div class="section-title"><h2>Boa ${greeting()}</h2></div>
+    <div class="stat-grid">
+      <div class="card stat-card"><div class="label">Total (BRL)</div><div class="value">${fmtMoney(totalAll,'BRL')}</div><div class="sub">${activeExpenses.length} despesas</div></div>
+      <div class="card stat-card"><div class="label">Viagens</div><div class="value">${trips.filter(t=>t.status!=='archived').length}</div><div class="sub">${trips.filter(t=>t.status==='ongoing').length} em andamento</div></div>
+      <div class="card stat-card"><div class="label">Sem comprovante</div><div class="value">${withoutReceipt}</div><div class="sub">despesas</div></div>
+      <div class="card stat-card"><div class="label">Armazenamento</div><div class="value" style="font-size:1.1rem;">${syncLabel}</div><div class="sub">${folder?'gravação automática ativa':'configure em Config. › Armazenamento'}</div></div>
+    </div>
+    <div class="section-title"><h2>Viagens recentes</h2><button class="btn btn-secondary btn-sm" id="dashNewTrip"><i class="bi bi-plus-lg"></i> Nova viagem</button></div>
+    <div id="dashTripsList"></div>
+  `;
+  const listEl = $('#dashTripsList');
+  if(recentTrips.length===0){
+    listEl.innerHTML = emptyStateHtml('bi-suitcase','Nenhuma viagem cadastrada.','Comece criando sua primeira viagem ou passeio.','+ Criar viagem','dashEmptyNewTrip');
+    $('#dashEmptyNewTrip').addEventListener('click', ()=>openTripModal());
+  } else {
+    listEl.className = 'trips-grid';
+    for(const t of recentTrips){ listEl.appendChild(await tripCardEl(t)); }
+  }
+  $('#dashNewTrip').addEventListener('click', ()=>openTripModal());
+}
+function greeting(){ const h=new Date().getHours(); return h<12?'dia':(h<18?'tarde':'noite'); }
+function emptyStateHtml(icon,title,text,btnLabel,btnId){
+  return `<div class="empty-state card"><div class="ic"><i class="bi ${icon}"></i></div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(text)}</p><button class="btn btn-primary" id="${btnId}"><i class="bi bi-plus-lg"></i> ${escapeHtml(btnLabel.replace('+ ',''))}</button></div>`;
+}
+
+/* ---------------- Trips list ---------------- */
+async function renderTripsList(){
+  const root = $('#view-trips');
+  root.innerHTML = `
+    <div class="section-title"><h2>Viagens</h2><button class="btn btn-primary btn-sm" id="tripsNewBtn"><i class="bi bi-plus-lg"></i> Nova viagem</button></div>
+    <div class="chip-row" id="tripsFilterChips" style="margin-bottom:14px;">
+      <button class="chip active" data-f="all">Todas</button>
+      <button class="chip" data-f="ongoing">Em andamento</button>
+      <button class="chip" data-f="finished">Finalizadas</button>
+      <button class="chip" data-f="archived">Arquivadas</button>
+    </div>
+    <div class="trips-grid" id="tripsGrid"></div>
+  `;
+  $('#tripsNewBtn').addEventListener('click', ()=>openTripModal());
+  $$('#tripsFilterChips .chip').forEach(c=>c.addEventListener('click', ()=>{
+    $$('#tripsFilterChips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active');
+    paintTrips(c.dataset.f);
+  }));
+  await paintTrips('all');
+}
+async function paintTrips(filter){
+  const grid = $('#tripsGrid');
+  let trips = await dbGetAll('trips');
+  trips.sort((a,b)=> new Date(b.startDate) - new Date(a.startDate));
+  if(filter==='ongoing') trips = trips.filter(t=>t.status==='ongoing');
+  else if(filter==='finished') trips = trips.filter(t=>t.status==='finished');
+  else if(filter==='archived') trips = trips.filter(t=>t.status==='archived');
+  else trips = trips.filter(t=>t.status!=='archived');
+  grid.innerHTML='';
+  if(trips.length===0){
+    grid.innerHTML = emptyStateHtml('bi-suitcase','Nenhuma viagem por aqui.','Ajuste o filtro ou crie uma nova viagem.','+ Criar viagem','tripsEmptyBtn');
+    $('#tripsEmptyBtn').addEventListener('click', ()=>openTripModal());
+    return;
+  }
+  for(const t of trips){ grid.appendChild(await tripCardEl(t)); }
+}
+async function tripTotal(tripId){
+  const expenses = await dbGetByIndex('expenses','tripId',tripId);
+  return expenses.filter(e=>!e.deletedAt).reduce((s,e)=>s+(e.amountMinor||0),0);
+}
+async function tripCardEl(t){
+  const total = await tripTotal(t.id);
+  const el = document.createElement('div');
+  el.className = 'card trip-card';
+  const statusBadge = {planned:['badge-planned','Planejada'],ongoing:['badge-ongoing','Em andamento'],finished:['badge-finished','Finalizada'],archived:['badge-archived','Arquivada']}[t.status] || ['','—'];
+  el.innerHTML = `
+    <div class="row1">
+      <div><h3>${escapeHtml(t.name)}</h3><div class="dest">${escapeHtml(t.destination||'')}</div></div>
+      <div class="amount">${fmtMoney(total, t.currency||'BRL')}</div>
+    </div>
+    <div class="meta">
+      <span class="badge ${statusBadge[0]}">${statusBadge[1]}</span>
+      <span>${fmtDateBR(t.startDate)} – ${fmtDateBR(t.endDate)}</span>
+    </div>`;
+  el.addEventListener('click', ()=>navigate('trip-detail',{tripId:t.id, tab:'resumo'}));
+  return el;
+}
+
+/* ---------------- Trip modal (create/edit) ---------------- */
+function openTripModal(trip){
+  $('#tripModalTitle').textContent = trip ? 'Editar viagem' : 'Nova viagem';
+  $('#tripId').value = trip?.id || '';
+  $('#tripName').value = trip?.name || '';
+  $('#tripShortName').value = trip?.shortName || '';
+  $('#tripType').value = trip?.type || 'viagem';
+  $('#tripDestination').value = trip?.destination || '';
+  $('#tripCurrency').value = trip?.currency || 'BRL';
+  $('#tripStart').value = trip?.startDate || todayISODate();
+  $('#tripEnd').value = trip?.endDate || todayISODate();
+  $('#tripNotes').value = trip?.notes || '';
+  openModal('modalTrip');
+  setTimeout(()=>$('#tripName').focus(), 50);
+}
+$('#tripForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const id = $('#tripId').value || uuid();
+  const isNew = !$('#tripId').value;
+  const existing = isNew ? null : await dbGet('trips', id);
+  const trip = {
+    id,
+    name: $('#tripName').value.trim(),
+    shortName: sanitizeFolderName($('#tripShortName').value || $('#tripName').value),
+    type: $('#tripType').value,
+    destination: $('#tripDestination').value.trim(),
+    country:'', city:'',
+    startDate: $('#tripStart').value,
+    endDate: $('#tripEnd').value,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    currency: $('#tripCurrency').value,
+    notes: $('#tripNotes').value.trim(),
+    status: existing?.status || 'planned',
+    createdAt: existing?.createdAt || nowIso(),
+    updatedAt: nowIso(),
+    finalizedAt: existing?.finalizedAt || null,
+    archivedAt: existing?.archivedAt || null,
+    syncStatus: 'local'
+  };
+  // Se a viagem já começou / está em andamento, marca status automaticamente
+  const today = todayISODate();
+  if(trip.status==='planned' && trip.startDate<=today && trip.endDate>=today) trip.status='ongoing';
+  await dbPut('trips', trip);
+  const folderResult = await createTripFolderStructure(trip);
+  closeModal('modalTrip');
+  if(folderResult.ok){
+    toast(isNew? 'Viagem criada' : 'Viagem atualizada', `Estrutura de pastas criada em "${trip.shortName}".`);
+  } else {
+    toast(isNew? 'Viagem criada' : 'Viagem atualizada', isNew? `Pasta "${trip.shortName}" será usada para organizar os arquivos quando você vincular uma pasta.` : null);
+  }
+  if(location.hash.includes('trip-detail') || currentTripId===id) renderTripDetail();
+  navigate('trip-detail',{tripId:id, tab:'resumo'});
+});
+
+/* ---------------- Trip detail ---------------- */
+async function renderTripDetail(){
+  const root = $('#view-trip-detail');
+  const trip = await dbGet('trips', currentTripId);
+  if(!trip){ navigate('trips'); return; }
+  const total = await tripTotal(trip.id);
+  const statusBadge = {planned:['badge-planned','Planejada'],ongoing:['badge-ongoing','Em andamento'],finished:['badge-finished','Finalizada'],archived:['badge-archived','Arquivada']}[trip.status] || ['','—'];
+  root.innerHTML = `
+    <button class="btn btn-secondary btn-sm no-print" id="backToTrips" style="margin-bottom:12px;"><i class="bi bi-arrow-left"></i> Viagens</button>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="row1" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div>
+          <h2 style="font-size:1.3rem;">${escapeHtml(trip.name)}</h2>
+          <div style="color:var(--color-text-secondary); font-size:.88rem; margin-top:2px;">${escapeHtml(trip.destination||'')} · ${fmtDateBR(trip.startDate)} – ${fmtDateBR(trip.endDate)}</div>
+          <div style="margin-top:8px;"><span class="badge ${statusBadge[0]}">${statusBadge[1]}</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:1.5rem; font-weight:800;">${fmtMoney(total, trip.currency)}</div>
+          <div class="no-print" style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="btn btn-secondary btn-sm" id="editTripBtn"><i class="bi bi-pencil"></i></button>
+            ${trip.status==='finished' ? '<button class="btn btn-secondary btn-sm" id="reopenTripBtn"><i class="bi bi-arrow-counterclockwise"></i> Reabrir</button>' : '<button class="btn btn-secondary btn-sm" id="finalizeTripBtn"><i class="bi bi-check2-circle"></i> Finalizar</button>'}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs no-print">
+      <button class="tab-btn" data-tab="resumo">Resumo</button>
+      <button class="tab-btn" data-tab="despesas">Despesas</button>
+      <button class="tab-btn" data-tab="memorias">Memórias</button>
+      <button class="tab-btn" data-tab="relatorio">Relatório</button>
+    </div>
+    <div id="tripTabContent"></div>
+  `;
+  $('#backToTrips').addEventListener('click', ()=>navigate('trips'));
+  $('#editTripBtn').addEventListener('click', ()=>openTripModal(trip));
+  const finBtn = $('#finalizeTripBtn'); if(finBtn) finBtn.addEventListener('click', ()=>finalizeTripFlow(trip));
+  const reopBtn = $('#reopenTripBtn'); if(reopBtn) reopBtn.addEventListener('click', async ()=>{
+    trip.status='finished'; // will be flipped below; simpler: set to 'ongoing'
+    trip.status = 'ongoing'; trip.updatedAt=nowIso();
+    await dbPut('trips', trip); toast('Viagem reaberta'); renderTripDetail();
+  });
+  $$('.tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===currentTripTab);
+    b.addEventListener('click', ()=>{ currentTripTab=b.dataset.tab; renderTripDetail(); });
+  });
+  const content = $('#tripTabContent');
+  if(currentTripTab==='despesas'){ await renderExpensesTab(content, trip); }
+  else if(currentTripTab==='memorias'){ await renderMemoriesTab(content, trip); }
+  else if(currentTripTab==='relatorio'){ await renderReportTab(content, trip); }
+  else { await renderResumoTab(content, trip); }
+}
+
+async function finalizeTripFlow(trip){
+  const expenses = (await dbGetByIndex('expenses','tripId',trip.id)).filter(e=>!e.deletedAt);
+  const withoutReceipt = expenses.filter(e=>!(e.attachments>0)).length;
+  const total = expenses.reduce((s,e)=>s+e.amountMinor,0);
+  let body = `Total: ${fmtMoney(total,trip.currency)} · ${expenses.length} despesas.`;
+  if(withoutReceipt>0) body += ` ⚠ ${withoutReceipt} despesas sem comprovante.`;
+  body += ' Você poderá reabrir esta viagem a qualquer momento.';
+  confirmDialog('Finalizar viagem?', body, async ()=>{
+    trip.status='finished'; trip.finalizedAt=nowIso(); trip.updatedAt=nowIso();
+    await dbPut('trips', trip);
+    toast('Viagem finalizada', 'Você pode reabri-la quando quiser.');
+    renderTripDetail();
+  });
+}
+
+async function renderResumoTab(content, trip){
+  const expenses = (await dbGetByIndex('expenses','tripId',trip.id)).filter(e=>!e.deletedAt);
+  const costCenters = await dbGetAll('costCenters');
+  const ccMap = Object.fromEntries(costCenters.map(c=>[c.id,c]));
+  const byCc = {};
+  expenses.forEach(e=>{ byCc[e.costCenterId] = (byCc[e.costCenterId]||0) + e.amountMinor; });
+  const total = expenses.reduce((s,e)=>s+e.amountMinor,0);
+  const days = Math.max(1, Math.round((new Date(trip.endDate)-new Date(trip.startDate))/86400000)+1);
+  const avgDay = total/days;
+  const withoutReceipt = expenses.filter(e=>!(e.attachments>0)).length;
+  const rows = Object.entries(byCc).sort((a,b)=>b[1]-a[1]).map(([ccId,val])=>{
+    const cc = ccMap[ccId] || {name:'Outros', icon:'🔖'};
+    const pct = total? Math.round((val/total)*100):0;
+    return `<div class="cc-breakdown-row"><div class="name">${cc.icon||''} ${escapeHtml(cc.name)}</div><div class="bar"><div class="progress-bar"><div style="width:${pct}%"></div></div></div><div class="val">${fmtMoney(val, trip.currency)}</div></div>`;
+  }).join('') || '<p style="color:var(--color-text-secondary); font-size:.88rem;">Sem despesas ainda.</p>';
+
+  const memories = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt);
+  const photoCount = memories.filter(m=>m.type==='photo').length;
+  const videoCount = memories.filter(m=>m.type==='video').length;
+
+  content.innerHTML = `
+    <div class="stat-grid" style="margin-bottom:18px;">
+      <div class="card stat-card"><div class="label">Despesas</div><div class="value">${expenses.length}</div></div>
+      <div class="card stat-card"><div class="label">Média por dia</div><div class="value">${fmtMoney(avgDay, trip.currency)}</div></div>
+      <div class="card stat-card"><div class="label">Sem comprovante</div><div class="value">${withoutReceipt}</div></div>
+      <div class="card stat-card"><div class="label">Sincronização</div><div class="value" style="font-size:1rem;">Local</div></div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3 style="margin-bottom:12px; font-size:.95rem;">Gastos por centro de custo</h3>${rows}
+    </div>
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer;" id="memoriesSummaryCard">
+      <div><div style="font-weight:700; font-size:.92rem;">Memórias</div><div style="color:var(--color-text-secondary); font-size:.85rem;">📷 ${photoCount} fotos &nbsp; 🎥 ${videoCount} vídeos</div></div>
+      <button class="btn btn-secondary btn-sm">Ver memórias</button>
+    </div>
+  `;
+  $('#memoriesSummaryCard').addEventListener('click', ()=>{ currentTripTab='memorias'; renderTripDetail(); });
+}
+
+async function renderExpensesTab(content, trip){
+  content.innerHTML = `
+    <div class="toolbar">
+      <div class="search-input-wrap"><i class="bi bi-search"></i><input class="input" id="expSearchInput" placeholder="Pesquisar despesas..."></div>
+      <select class="input" id="expSortSelect" style="max-width:180px;">
+        <option value="movementDate">Data do movimento</option>
+        <option value="createdAt">Data de criação</option>
+        <option value="description">Ordem alfabética</option>
+        <option value="amountMinor">Valor</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" id="expSortDirBtn"><i class="bi bi-sort-down"></i></button>
+      <button class="btn btn-secondary btn-sm" id="expFilterBtn"><i class="bi bi-funnel"></i> Filtrar</button>
+      <button class="btn btn-primary btn-sm" id="expAddBtn"><i class="bi bi-plus-lg"></i> Nova despesa</button>
+    </div>
+    <div id="expFilterPanel" class="card hidden" style="margin-bottom:12px;"></div>
+    <div class="expenses-list" id="expensesList"></div>
+  `;
+  $('#expSortSelect').value = SETTINGS.expenseSort;
+  updateSortDirIcon();
+  $('#expAddBtn').addEventListener('click', ()=>openExpenseModal(trip.id));
+  $('#expSearchInput').addEventListener('input', ()=>paintExpenses(trip));
+  $('#expSortSelect').addEventListener('change', async (e)=>{ await saveSetting('expenseSort', e.target.value); paintExpenses(trip); });
+  $('#expSortDirBtn').addEventListener('click', async ()=>{
+    await saveSetting('expenseSortDir', SETTINGS.expenseSortDir==='asc'?'desc':'asc');
+    updateSortDirIcon(); paintExpenses(trip);
+  });
+  $('#expFilterBtn').addEventListener('click', async ()=>{
+    const panel = $('#expFilterPanel');
+    if(panel.classList.contains('hidden')){
+      const costCenters = await dbGetAll('costCenters');
+      const pms = await dbGetAll('paymentMethods');
+      panel.innerHTML = `
+        <div class="form-row cols-3">
+          <div class="form-group"><label>Centro de custo</label><select class="input" id="filterCc"><option value="">Todos</option>${costCenters.map(c=>`<option value="${c.id}">${c.icon||''} ${escapeHtml(c.name)}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Forma de pagamento</label><select class="input" id="filterPm"><option value="">Todas</option>${pms.map(p=>`<option value="${p.id}">${escapeHtml(p.nickname)}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Comprovante</label><select class="input" id="filterReceipt"><option value="">Todos</option><option value="no">Somente sem comprovante</option></select></div>
+        </div>`;
+      $('#filterCc').addEventListener('change', ()=>paintExpenses(trip));
+      $('#filterPm').addEventListener('change', ()=>paintExpenses(trip));
+      $('#filterReceipt').addEventListener('change', ()=>paintExpenses(trip));
+      panel.classList.remove('hidden');
+    } else panel.classList.add('hidden');
+  });
+  await paintExpenses(trip);
+}
+function updateSortDirIcon(){
+  $('#expSortDirBtn').innerHTML = SETTINGS.expenseSortDir==='asc' ? '<i class="bi bi-sort-up"></i>' : '<i class="bi bi-sort-down"></i>';
+}
+async function paintExpenses(trip){
+  const listEl = $('#expensesList');
+  let expenses = (await dbGetByIndex('expenses','tripId',trip.id)).filter(e=>!e.deletedAt);
+  const costCenters = await dbGetAll('costCenters');
+  const pms = await dbGetAll('paymentMethods');
+  const ccMap = Object.fromEntries(costCenters.map(c=>[c.id,c]));
+  const pmMap = Object.fromEntries(pms.map(p=>[p.id,p]));
+
+  const q = ($('#expSearchInput')?.value || '').toLowerCase().trim();
+  if(q){
+    expenses = expenses.filter(e => [e.description,e.merchant,e.city,e.notes, ccMap[e.costCenterId]?.name, pmMap[e.paymentMethodId]?.nickname]
+      .filter(Boolean).some(v=>String(v).toLowerCase().includes(q)));
+  }
+  const fCc = $('#filterCc')?.value; if(fCc) expenses = expenses.filter(e=>e.costCenterId===fCc);
+  const fPm = $('#filterPm')?.value; if(fPm) expenses = expenses.filter(e=>e.paymentMethodId===fPm);
+  const fReceipt = $('#filterReceipt')?.value; if(fReceipt==='no') expenses = expenses.filter(e=>!(e.attachments>0));
+
+  const sortKey = SETTINGS.expenseSort; const dir = SETTINGS.expenseSortDir==='asc'?1:-1;
+  expenses.sort((a,b)=>{
+    let av=a[sortKey], bv=b[sortKey];
+    if(sortKey==='movementDate'){ av = a.movementDate+' '+(a.movementTime||''); bv = b.movementDate+' '+(b.movementTime||''); }
+    if(typeof av==='string') return av.localeCompare(bv)*dir;
+    return ((av||0)-(bv||0))*dir;
+  });
+
+  listEl.innerHTML='';
+  if(expenses.length===0){
+    listEl.innerHTML = emptyStateHtml('bi-receipt','Ainda não há despesas nesta viagem.','Registre seu primeiro gasto para começar a acompanhar os custos.','+ Nova despesa','expEmptyBtn');
+    $('#expEmptyBtn')?.addEventListener('click', ()=>openExpenseModal(trip.id));
+    return;
+  }
+  for(const e of expenses){
+    const cc = ccMap[e.costCenterId] || {name:'Outros', icon:'🔖'};
+    const pm = pmMap[e.paymentMethodId];
+    const card = document.createElement('div');
+    card.className = 'card expense-card';
+    card.innerHTML = `
+      <div class="row1">
+        <div class="cc"><span class="ic">${cc.icon||'🔖'}</span> ${escapeHtml(cc.name)}</div>
+        <div class="amount">${fmtMoney(e.amountMinor, e.currency)}</div>
+      </div>
+      ${e.merchant? `<div class="merchant">${escapeHtml(e.merchant)}</div>`:''}
+      <div class="meta">
+        <span><i class="bi bi-calendar3"></i> ${fmtDateBR(e.movementDate)}${e.movementTime? ' · '+e.movementTime:''}</span>
+        ${pm? `<span><i class="bi bi-credit-card"></i> ${escapeHtml(pm.nickname)}</span>`:''}
+        ${e.attachments>0? `<span><i class="bi bi-paperclip"></i> ${e.attachments}</span>`:'<span style="color:var(--color-warning);"><i class="bi bi-exclamation-circle"></i> sem comprovante</span>'}
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary btn-sm" data-act="edit"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-secondary btn-sm" data-act="dup"><i class="bi bi-files"></i></button>
+        <button class="btn btn-danger btn-sm" data-act="del"><i class="bi bi-trash"></i></button>
+      </div>
+    `;
+    card.querySelector('[data-act="edit"]').addEventListener('click', ()=>openExpenseModal(trip.id, e));
+    card.querySelector('[data-act="dup"]').addEventListener('click', ()=>duplicateExpense(e, trip));
+    card.querySelector('[data-act="del"]').addEventListener('click', ()=>{
+      confirmDialog('Excluir esta despesa?', 'Essa ação removerá a despesa do registro local. Os arquivos anexados poderão permanecer na nuvem até serem tratados pela sincronização.', async ()=>{
+        e.deletedAt = nowIso(); e.updatedAt = nowIso(); await dbPut('expenses', e);
+        toast('Despesa excluída'); paintExpenses(trip);
+      });
+    });
+    listEl.appendChild(card);
+  }
+}
+async function duplicateExpense(e, trip){
+  const copy = {...e, id:uuid(), createdAt:nowIso(), updatedAt:nowIso(), version:1, deletedAt:null, attachments:0};
+  await dbPut('expenses', copy);
+  toast('Despesa duplicada', 'Ajuste data e valor se necessário.');
+  openExpenseModal(trip.id, copy);
+}
+
+/* ---------------- Memórias (fotos e vídeos da viagem) ---------------- */
+async function renderMemoriesTab(content, trip){
+  content.innerHTML = `
+    <div class="toolbar no-print">
+      <div class="chip-row" id="memFilterChips">
+        <button class="chip active" data-f="all">Todas</button>
+        <button class="chip" data-f="photo">Fotos</button>
+        <button class="chip" data-f="video">Vídeos</button>
+      </div>
+      <div class="spacer" style="flex:1;"></div>
+      <label class="btn btn-secondary btn-sm" for="memCameraPhoto"><i class="bi bi-camera"></i> Foto</label>
+      <input type="file" id="memCameraPhoto" accept="image/*" capture="environment" class="hidden">
+      <label class="btn btn-secondary btn-sm" for="memCameraVideo"><i class="bi bi-camera-video"></i> Vídeo</label>
+      <input type="file" id="memCameraVideo" accept="video/*" capture="environment" class="hidden">
+      <label class="btn btn-primary btn-sm" for="memGallery"><i class="bi bi-images"></i> Galeria/arquivo</label>
+      <input type="file" id="memGallery" accept="image/*,video/*" multiple class="hidden">
+    </div>
+    <div class="no-print" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:.82rem; color:var(--color-text-secondary); cursor:pointer;">
+        <input type="checkbox" id="memBurstMode"> Modo rajada (reabre a câmera automaticamente para tirar várias fotos seguidas)
+      </label>
+      <span id="memBurstCounter" style="display:none; font-size:.78rem; font-weight:600; color:var(--color-primary);"></span>
+    </div>
+    <div id="memCountsLine" style="font-size:.82rem; color:var(--color-text-secondary); margin-bottom:10px;"></div>
+    <div id="memGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px;"></div>
+  `;
+  $$('#memFilterChips .chip').forEach(c=>c.addEventListener('click', ()=>{
+    $$('#memFilterChips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active');
+    paintMemories(trip, c.dataset.f);
+  }));
+  let burstCount = 0;
+  const burstCounterEl = $('#memBurstCounter');
+  $('#memCameraPhoto').addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files||[]);
+    for(const file of files){ await saveMemoryFile(trip, file); }
+    e.target.value='';
+    paintMemories(trip, $('#memFilterChips .chip.active')?.dataset.f || 'all');
+    // Modo rajada: se ligado e o usuário tirou uma foto (não cancelou), reabre a
+    // câmera imediatamente para a próxima. O input "capture" só permite 1 foto por
+    // vez (limitação do sistema, não do app) — isto simula uma sequência rápida.
+    if($('#memBurstMode').checked && files.length){
+      burstCount += files.length;
+      burstCounterEl.style.display = 'inline';
+      burstCounterEl.textContent = `Rajada: ${burstCount} foto${burstCount>1?'s':''} — toque em Foto de novo ou desmarque para parar`;
+      setTimeout(()=>{ if($('#memBurstMode').checked) $('#memCameraPhoto').click(); }, 350);
+    } else {
+      burstCount = 0; burstCounterEl.style.display='none';
+    }
+  });
+  $('#memBurstMode').addEventListener('change', (e)=>{
+    if(!e.target.checked){ burstCount = 0; burstCounterEl.style.display='none'; }
+  });
+  $('#memCameraVideo').addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files||[]);
+    for(const file of files){ await saveMemoryFile(trip, file); }
+    e.target.value='';
+    paintMemories(trip, $('#memFilterChips .chip.active')?.dataset.f || 'all');
+  });
+  $('#memGallery').addEventListener('change', async (e)=>{
+    const files = Array.from(e.target.files||[]);
+    for(const file of files){ await saveMemoryFile(trip, file); }
+    e.target.value='';
+    paintMemories(trip, $('#memFilterChips .chip.active')?.dataset.f || 'all');
+  });
+  await paintMemories(trip, 'all');
+}
+
+async function saveMemoryFile(trip, file){
+  const type = file.type.startsWith('video') ? 'video' : 'photo';
+  const id = uuid();
+  const fileName = uniqueFileName(trip.shortName, file.name || (type==='photo'?'foto.jpg':'video.mp4'));
+  const rec = {
+    id, tripId: trip.id, type, fileName, mimeType: file.type, size: file.size,
+    createdAt: nowIso(), capturedAt: nowIso(), blob: file,
+    cloudPath: null, syncStatus:'aguardando', notes:'', deletedAt:null
+  };
+  const written = await writeFileToTripFolder(trip, ['Memórias', type==='photo'?'Fotos':'Vídeos'], fileName, file);
+  if(written.ok){ rec.syncStatus='sincronizado'; rec.cloudPath=written.cloudPath; }
+  await dbPut('memories', rec);
+  toast(type==='photo' ? 'Foto salva' : 'Vídeo salvo', written.ok ? 'Gravado na pasta vinculada.' : 'Aguardando: vincule uma pasta para gravar automaticamente.');
+}
+
+const memoryObjectUrls = new Map();
+async function paintMemories(trip, filter){
+  const grid = $('#memGrid');
+  let memories = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt);
+  if(filter==='photo') memories = memories.filter(m=>m.type==='photo');
+  if(filter==='video') memories = memories.filter(m=>m.type==='video');
+  memories.sort((a,b)=> new Date(b.capturedAt) - new Date(a.capturedAt));
+  const photoCount = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt && m.type==='photo').length;
+  const videoCount = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt && m.type==='video').length;
+  $('#memCountsLine').textContent = `📷 ${photoCount} fotos · 🎥 ${videoCount} vídeos`;
+
+  grid.innerHTML='';
+  if(memories.length===0){
+    grid.style.display='block';
+    grid.innerHTML = emptyStateHtml('bi-images','Ainda não há memórias nesta viagem.','Registre fotos e vídeos espontâneos com a câmera do dispositivo.','+ Nova memória','memEmptyBtn');
+    $('#memEmptyBtn')?.addEventListener('click', ()=>$('#memGallery').click());
+    return;
+  }
+  grid.style.display='grid';
+  for(const m of memories){
+    const url = URL.createObjectURL(m.blob);
+    memoryObjectUrls.set(m.id, url);
+    const cell = document.createElement('div');
+    cell.style.cssText = 'position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--color-bg); cursor:pointer;';
+    if(m.type==='photo'){
+      cell.innerHTML = `<img src="${url}" alt="" style="width:100%; height:100%; object-fit:cover;">`;
+    } else {
+      cell.innerHTML = `<video src="${url}" style="width:100%; height:100%; object-fit:cover;" muted></video><div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.15); color:#fff; font-size:1.6rem;"><i class="bi bi-play-circle-fill"></i></div>`;
+    }
+    if(m.syncStatus!=='sincronizado'){
+      cell.innerHTML += `<span style="position:absolute; top:5px; right:5px; width:9px; height:9px; border-radius:50%; background:var(--color-warning); border:1px solid #fff;" title="Aguardando sincronização"></span>`;
+    }
+    cell.addEventListener('click', ()=>openMemoryViewer(trip, m, url));
+    grid.appendChild(cell);
+  }
+}
+
+function openMemoryViewer(trip, m, url){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop open';
+  backdrop.style.zIndex = 90;
+  const mediaHtml = m.type==='photo'
+    ? `<img src="${url}" style="width:100%; border-radius:var(--radius-md); max-height:60vh; object-fit:contain; background:#000;">`
+    : `<video src="${url}" controls style="width:100%; border-radius:var(--radius-md); max-height:60vh; background:#000;"></video>`;
+  backdrop.innerHTML = `
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header"><h2 style="font-size:1rem;">${fmtDateBR(m.capturedAt.slice(0,10))}${m.capturedAt.slice(11,16)? ' às '+m.capturedAt.slice(11,16):''}</h2><button class="icon-btn" id="memViewerClose"><i class="bi bi-x-lg"></i></button></div>
+      ${mediaHtml}
+      <div class="form-group" style="margin-top:14px;"><label>Descrição</label><input class="input" id="memNotesInput" value="${escapeHtml(m.notes||'')}" placeholder="Ex.: Pôr do sol na praia"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-danger" id="memDeleteBtn" style="flex:1;"><i class="bi bi-trash"></i> Excluir</button>
+        <button type="button" class="btn btn-primary" id="memSaveNotesBtn" style="flex:1;">Salvar descrição</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e)=>{ if(e.target===backdrop) backdrop.remove(); });
+  $('#memViewerClose', backdrop).addEventListener('click', ()=>backdrop.remove());
+  $('#memSaveNotesBtn', backdrop).addEventListener('click', async ()=>{
+    m.notes = $('#memNotesInput', backdrop).value.trim();
+    await dbPut('memories', m);
+    toast('Descrição salva'); backdrop.remove();
+  });
+  $('#memDeleteBtn', backdrop).addEventListener('click', ()=>{
+    confirmDialog('Excluir esta memória?', m.cloudPath ? 'O arquivo pode permanecer na pasta vinculada — remova-o por lá manualmente se quiser liberar espaço.' : 'Essa ação remove a memória deste dispositivo.', async ()=>{
+      m.deletedAt = nowIso(); await dbPut('memories', m);
+      backdrop.remove(); toast('Memória excluída');
+      paintMemories(trip, $('#memFilterChips .chip.active')?.dataset.f || 'all');
+    });
+  });
+}
+
+/* ---------------- Report tab (print-based "PDF") ---------------- */
+async function renderReportTab(content, trip){
+  const expenses = (await dbGetByIndex('expenses','tripId',trip.id)).filter(e=>!e.deletedAt);
+  const costCenters = await dbGetAll('costCenters');
+  const ccMap = Object.fromEntries(costCenters.map(c=>[c.id,c]));
+  const pms = await dbGetAll('paymentMethods');
+  const pmMap = Object.fromEntries(pms.map(p=>[p.id,p]));
+  const total = expenses.reduce((s,e)=>s+e.amountMinor,0);
+  const byCc = {};
+  expenses.forEach(e=>{ byCc[e.costCenterId] = (byCc[e.costCenterId]||0) + e.amountMinor; });
+  const rowsCc = Object.entries(byCc).sort((a,b)=>b[1]-a[1]).map(([id,v])=>`<tr><td>${escapeHtml(ccMap[id]?.name||'Outros')}</td><td style="text-align:right;">${fmtMoney(v,trip.currency)}</td></tr>`).join('');
+  const sorted = [...expenses].sort((a,b)=>a.movementDate.localeCompare(b.movementDate));
+  const rowsExp = sorted.map(e=>`<tr><td>${fmtDateBR(e.movementDate)}</td><td>${escapeHtml(e.description)}</td><td>${escapeHtml(ccMap[e.costCenterId]?.name||'-')}</td><td>${escapeHtml(pmMap[e.paymentMethodId]?.nickname||'-')}</td><td style="text-align:right;">${fmtMoney(e.amountMinor,e.currency)}</td></tr>`).join('');
+
+  content.innerHTML = `
+    <div class="card no-print" style="margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+      <div style="font-size:.85rem; color:var(--color-text-secondary);">O relatório é gerado como página imprimível — use "Salvar como PDF" na janela de impressão do navegador. Isso garante geração 100% offline, sem dependências externas.</div>
+      <button class="btn btn-primary btn-sm" id="printBtn"><i class="bi bi-printer"></i> Gerar PDF / Imprimir</button>
+    </div>
+    <div class="card" id="reportPrintArea">
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="font-weight:800; letter-spacing:.08em; color:var(--color-primary); font-size:.85rem;">TRAVEL COST</div>
+        <h2 style="margin-top:6px;">Relatório da viagem</h2>
+        <div style="color:var(--color-text-secondary); font-size:.9rem; margin-top:4px;">${escapeHtml(trip.name)} · ${escapeHtml(trip.destination||'')}</div>
+        <div style="color:var(--color-text-secondary); font-size:.85rem;">${fmtDateBR(trip.startDate)} — ${fmtDateBR(trip.endDate)}</div>
+        <div style="font-size:1.8rem; font-weight:800; margin-top:14px;">${fmtMoney(total, trip.currency)}</div>
+      </div>
+      <h3 style="font-size:.9rem; margin-bottom:8px;">Resumo por centro de custo</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:20px;">${rowsCc||'<tr><td>Sem dados</td></tr>'}</table>
+      <h3 style="font-size:.9rem; margin-bottom:8px;">Despesas detalhadas</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:.8rem;">
+        <thead><tr style="border-bottom:1px solid var(--color-border); text-align:left;"><th>Data</th><th>Descrição</th><th>Centro</th><th>Pagamento</th><th style="text-align:right;">Valor</th></tr></thead>
+        <tbody>${rowsExp || '<tr><td colspan="5">Sem despesas.</td></tr>'}</tbody>
+      </table>
+      <div style="margin-top:20px; font-size:.72rem; color:var(--color-text-secondary); text-align:right;">Gerado em ${fmtDateBR(todayISODate())}</div>
+    </div>
+  `;
+  $('#printBtn').addEventListener('click', ()=>window.print());
+}
+
+/* ---------------- Expense modal ---------------- */
+let pendingAttachments = []; // {id, kind, fileName, blob, mimeType, size}
+async function openExpenseModal(tripId, expense){
+  $('#expModalTitle').textContent = expense ? 'Editar despesa' : 'Nova despesa';
+  $('#expTripId').value = tripId;
+  $('#expId').value = expense?.id || '';
+  $('#expDescription').value = expense?.description || '';
+  $('#expCurrency').value = expense?.currency || 'BRL';
+  $('#expAmount').value = expense ? (expense.amountMinor/100).toFixed(2).replace('.',',') : '';
+  $('#expDate').value = expense?.movementDate || todayISODate();
+  $('#expTime').value = expense?.movementTime || nowTimeHM();
+  $('#expMerchant').value = expense?.merchant || '';
+  $('#expCity').value = expense?.city || '';
+  $('#expNotes').value = expense?.notes || '';
+  $('#expDateWarning').style.display='none';
+
+  const costCenters = await dbGetAll('costCenters');
+  $('#expCostCenter').innerHTML = costCenters.filter(c=>c.active!==false).map(c=>`<option value="${c.id}">${c.icon||''} ${escapeHtml(c.name)}</option>`).join('');
+  if(expense?.costCenterId) $('#expCostCenter').value = expense.costCenterId;
+
+  const pms = await dbGetAll('paymentMethods');
+  $('#expPaymentMethod').innerHTML = pms.filter(p=>p.active!==false).map(p=>`<option value="${p.id}">${escapeHtml(pmLabel(p))}</option>`).join('');
+  if(expense?.paymentMethodId) $('#expPaymentMethod').value = expense.paymentMethodId;
+
+  pendingAttachments = [];
+  if(expense?.id){
+    const existing = await dbGetByIndex('attachments','expenseId',expense.id);
+    pendingAttachments = existing.map(a=>({id:a.id, kind:'existing', fileName:a.fileName, mimeType:a.mimeType, size:a.size}));
+  }
+  renderAttachList();
+  openModal('modalExpense');
+  setTimeout(()=>$('#expDescription').focus(), 50);
+}
+function pmLabel(p){
+  if(p.type==='credito' || p.type==='debito') return `${p.nickname}${p.last4? ' •••• '+p.last4:''}`;
+  return p.nickname;
+}
+function renderAttachList(){
+  const wrap = $('#expAttachList');
+  wrap.innerHTML = pendingAttachments.map((a,i)=>`
+    <div class="attach-chip"><i class="bi ${a.mimeType?.includes('pdf')?'bi-file-earmark-pdf':'bi-image'}"></i> ${escapeHtml(a.fileName)} <button type="button" data-i="${i}"><i class="bi bi-x"></i></button></div>
+  `).join('');
+  $$('.attach-chip button', wrap).forEach(b=>b.addEventListener('click', ()=>{
+    pendingAttachments.splice(Number(b.dataset.i),1); renderAttachList();
+  }));
+}
+function handleFileInput(input, kind){
+  input.addEventListener('change', ()=>{
+    const files = Array.from(input.files||[]);
+    files.forEach(file=>{
+      pendingAttachments.push({id:uuid(), kind:'new', fileName:file.name, mimeType:file.type, size:file.size, blob:file});
+    });
+    renderAttachList();
+    input.value='';
+    // Modo rajada: reabre a câmera automaticamente para o próximo comprovante.
+    if(kind==='camera' && files.length && $('#expBurstMode') && $('#expBurstMode').checked){
+      setTimeout(()=>{ if($('#expBurstMode') && $('#expBurstMode').checked) input.click(); }, 350);
+    }
+  });
+}
+handleFileInput($('#expFileCamera'),'camera');
+handleFileInput($('#expFileAny'),'file');
+
+let expenseFormMode = 'single';
+$('#expSaveAddAnother').addEventListener('click', ()=>{ expenseFormMode='again'; });
+$('#expenseForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const tripId = $('#expTripId').value;
+  const trip = await dbGet('trips', tripId);
+  const movementDate = $('#expDate').value;
+  const outOfRange = trip && (movementDate < trip.startDate || movementDate > trip.endDate);
+  const proceed = async () => { await saveExpense(); };
+  if(outOfRange){
+    confirmDialog('Data fora do período', 'A data desta despesa está fora do período da viagem. Deseja continuar?', proceed);
+    return;
+  }
+  await proceed();
+});
+async function saveExpense(){
+  const id = $('#expId').value || uuid();
+  const isNew = !$('#expId').value;
+  const tripId = $('#expTripId').value;
+  const trip = await dbGet('trips', tripId);
+  const existing = isNew ? null : await dbGet('expenses', id);
+  const expense = {
+    id, tripId,
+    description: $('#expDescription').value.trim(),
+    merchant: $('#expMerchant').value.trim(),
+    movementDate: $('#expDate').value,
+    movementTime: $('#expTime').value,
+    amountMinor: parseMoneyToMinor($('#expAmount').value),
+    currency: $('#expCurrency').value,
+    costCenterId: $('#expCostCenter').value,
+    paymentMethodId: $('#expPaymentMethod').value,
+    city: $('#expCity').value.trim(), country:'',
+    notes: $('#expNotes').value.trim(),
+    tags: existing?.tags || [],
+    reimbursable: existing?.reimbursable || false,
+    reimbursementStatus: existing?.reimbursementStatus || 'nao_solicitado',
+    attachments: pendingAttachments.length,
+    createdAt: existing?.createdAt || nowIso(),
+    updatedAt: nowIso(),
+    deletedAt: null,
+    version: (existing?.version||0)+1,
+    syncStatus:'local'
+  };
+  await dbPut('expenses', expense);
+
+  // sync attachments store: remove ones not in pendingAttachments anymore, add new ones
+  if(existing){
+    const currentAttachments = await dbGetByIndex('attachments','expenseId', id);
+    for(const a of currentAttachments){
+      if(!pendingAttachments.find(p=>p.id===a.id)) await dbDelete('attachments', a.id);
+    }
+  }
+  let anyPending = false;
+  for(const a of pendingAttachments){
+    if(a.kind==='new'){
+      const fileName = uniqueFileName(sanitizeFolderName(expense.description).slice(0,24), a.fileName);
+      const rec = {id:a.id, expenseId:id, tripId, kind:'comprovante', fileName, mimeType:a.mimeType, size:a.size, blob:a.blob, createdAt:nowIso(), syncStatus:'aguardando', cloudPath:null};
+      const written = await writeFileToTripFolder(trip, ['Despesas','Comprovantes'], fileName, a.blob);
+      if(written.ok){ rec.syncStatus='sincronizado'; rec.cloudPath=written.cloudPath; } else { anyPending = true; }
+      await dbPut('attachments', rec);
+    }
+  }
+
+  closeModal('modalExpense');
+  toast('Despesa salva ✓', anyPending ? 'Comprovante aguardando: vincule uma pasta em Configurações › Armazenamento.' : 'Comprovante salvo.');
+  updateSyncPill();
+  if(currentTripId===tripId) renderTripDetail();
+  if(expenseFormMode==='again'){ expenseFormMode='single'; setTimeout(()=>openExpenseModal(tripId), 200); }
+}
+
+/* ---------------- Global search ---------------- */
+$('#globalSearchInput').addEventListener('input', async (e)=>{
+  const q = e.target.value.toLowerCase().trim();
+  const resultsEl = $('#globalSearchResults');
+  if(!q){ resultsEl.innerHTML=''; return; }
+  const [expenses, trips, costCenters, pms] = await Promise.all([dbGetAll('expenses'), dbGetAll('trips'), dbGetAll('costCenters'), dbGetAll('paymentMethods')]);
+  const tripMap = Object.fromEntries(trips.map(t=>[t.id,t]));
+  const ccMap = Object.fromEntries(costCenters.map(c=>[c.id,c]));
+  const pmMap = Object.fromEntries(pms.map(p=>[p.id,p]));
+  const matches = expenses.filter(e=>!e.deletedAt).filter(e=>[e.description,e.merchant,e.city,e.notes, ccMap[e.costCenterId]?.name, pmMap[e.paymentMethodId]?.nickname, tripMap[e.tripId]?.name]
+    .filter(Boolean).some(v=>String(v).toLowerCase().includes(q))).slice(0,30);
+  resultsEl.innerHTML = matches.length ? matches.map(e=>`
+    <div class="mgmt-row" style="cursor:pointer;" data-trip="${e.tripId}">
+      <div class="ic">${ccMap[e.costCenterId]?.icon||'🔖'}</div>
+      <div class="info"><div class="t">${escapeHtml(e.description)}</div><div class="d">${escapeHtml(tripMap[e.tripId]?.name||'')} · ${fmtDateBR(e.movementDate)} · ${fmtMoney(e.amountMinor,e.currency)}</div></div>
+    </div>`).join('') : '<p style="color:var(--color-text-secondary); font-size:.85rem;">Nenhum resultado.</p>';
+  $$('#globalSearchResults .mgmt-row').forEach(r=>r.addEventListener('click', ()=>{
+    closeModal('modalSearch'); navigate('trip-detail',{tripId:r.dataset.trip, tab:'despesas'});
+  }));
+});
+
+/* ---------------- Settings view ---------------- */
+async function renderSettings(){
+  const root = $('#view-settings');
+  root.innerHTML = `
+    <div class="section-title"><h2>Configurações</h2></div>
+    <div class="tabs">
+      <button class="tab-btn active" data-stab="aparencia">Aparência</button>
+      <button class="tab-btn" data-stab="armazenamento">Armazenamento</button>
+      <button class="tab-btn" data-stab="centros">Centros de custo</button>
+      <button class="tab-btn" data-stab="pagamentos">Pagamentos</button>
+      <button class="tab-btn" data-stab="privacidade">Privacidade</button>
+      <button class="tab-btn" data-stab="app">Aplicativo</button>
+    </div>
+    <div id="settingsTabContent"></div>
+  `;
+  $$('#view-settings .tab-btn').forEach(b=>b.addEventListener('click', ()=>{
+    $$('#view-settings .tab-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    paintSettingsTab(b.dataset.stab);
+  }));
+  paintSettingsTab('aparencia');
+}
+async function paintSettingsTab(tab){
+  const el = $('#settingsTabContent');
+  if(tab==='aparencia'){
+    el.innerHTML = `
+      <div class="card settings-list">
+        <div class="item"><div><div class="t">Tema</div><div class="d">Claro, escuro ou seguir o sistema</div></div>
+          <select class="input" id="setTheme" style="max-width:150px;"><option value="light">Claro</option><option value="dark">Escuro</option><option value="system">Sistema</option></select>
+        </div>
+        <div class="item"><div><div class="t">Fonte</div><div class="d">Aplicada ao aplicativo inteiro</div></div>
+          <select class="input" id="setFont" style="max-width:170px;">${GOOGLE_FONTS.map(f=>`<option value="${f}">${f}</option>`).join('')}</select>
+        </div>
+        <div class="item"><div><div class="t">Tamanho da fonte</div><div class="d">Padrão: Normal</div></div>
+          <select class="input" id="setFontSize" style="max-width:150px;"><option value="pequeno">Pequeno</option><option value="normal">Normal</option><option value="grande">Grande</option><option value="muitogrande">Muito grande</option></select>
+        </div>
+      </div>`;
+    $('#setTheme').value = SETTINGS.theme;
+    $('#setFont').value = SETTINGS.fontFamily;
+    $('#setFontSize').value = SETTINGS.fontSize;
+    $('#setTheme').addEventListener('change', async e=>{ await saveSetting('theme', e.target.value); applyTheme(); });
+    $('#setFont').addEventListener('change', async e=>{ await saveSetting('fontFamily', e.target.value); applyFontFamily(); });
+    $('#setFontSize').addEventListener('change', async e=>{ await saveSetting('fontSize', e.target.value); applyFontSize(); });
+  }
+  else if(tab==='armazenamento'){
+    const folder = await peekLocalFolderHandle();
+    const storedHandle = await getStoredFolderHandleRaw();
+    const needsReconnect = !folder && !!storedHandle;
+    el.innerHTML = `
+      <div class="card" style="margin-bottom:14px;">
+        <div style="font-weight:600; margin-bottom:6px;">Pasta compartilhada (link)</div>
+        <p style="color:var(--color-text-secondary); font-size:.85rem; margin:0 0 12px;">
+          Cole aqui o link da pasta do Google Drive ou OneDrive (com permissão de edição). Ele fica salvo
+          apenas neste dispositivo e serve como referência rápida — navegadores não conseguem gravar
+          arquivos direto num link de pasta sem autenticação, isso é uma limitação da própria plataforma.
+        </p>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Provedor</label>
+            <select class="input" id="setSharedProvider"><option value="none">Nenhum</option><option value="google">Google Drive</option><option value="onedrive">OneDrive</option></select>
+          </div>
+          <div class="form-group"><label>Nome da pasta principal</label><input class="input" id="setRootFolderName"></div>
+        </div>
+        <div class="form-group"><label>Link da pasta</label><input class="input" id="setSharedLink" placeholder="https://drive.google.com/drive/folders/..."></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" id="saveLinkBtn"><i class="bi bi-save"></i> Salvar link</button>
+          <button class="btn btn-secondary btn-sm" id="openLinkBtn"><i class="bi bi-box-arrow-up-right"></i> Abrir pasta</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:600; margin-bottom:6px;">Gravação real neste dispositivo</div>
+        <p style="color:var(--color-text-secondary); font-size:.85rem; margin:0 0 12px;">
+          ${FS_ACCESS_SUPPORTED
+            ? 'Se você já tem o cliente do Google Drive ou OneDrive instalado e sincronizando uma pasta neste computador, vincule essa pasta local abaixo. Escolha diretamente a pasta "Travel Cost" (ou o nome que preferir) — as viagens são criadas dentro dela, sem criar outra pasta "Travel Cost" por dentro. O app passa a gravar os comprovantes, notas fiscais e memórias de verdade nela, e o próprio sincronizador do Google/Microsoft cuida do envio para a nuvem. Nenhuma senha ou login é solicitado pelo Travel Cost.'
+            : 'Este recurso (File System Access API) está disponível apenas em navegadores desktop compatíveis, como Chrome ou Edge. Neste navegador, use apenas o link acima como referência — os arquivos continuam salvos neste aparelho até você abrir o app em um navegador compatível.'}
+        </p>
+        ${FS_ACCESS_SUPPORTED ? `
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <span class="sync-dot ${folder?'':'pending'}"></span>
+            <span style="font-size:.85rem;">${
+              folder ? 'Pasta local vinculada e com permissão de gravação.'
+              : needsReconnect ? 'Pasta vinculada anteriormente, mas a permissão de gravação precisa ser reconfirmada nesta sessão do navegador (isso é normal e não apaga a vinculação).'
+              : 'Nenhuma pasta local vinculada ainda.'
+            }</span>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            ${needsReconnect ? `<button class="btn btn-primary btn-sm" id="reconnectFolderBtn"><i class="bi bi-arrow-repeat"></i> Reconectar pasta</button>` : ''}
+            <button class="btn ${needsReconnect?'btn-secondary':'btn-primary'} btn-sm" id="linkFolderBtn"><i class="bi bi-folder-plus"></i> ${folder||needsReconnect?'Trocar pasta vinculada':'Vincular pasta local'}</button>
+          </div>
+        ` : ''}
+        <p style="color:var(--color-text-secondary); font-size:.78rem; margin-top:12px;">
+          A pasta vinculada é local a este dispositivo. Em outro aparelho, vincule a mesma pasta novamente, ou
+          restaure um backup JSON — ele leva o link de referência, mas não a permissão de gravação (isso o
+          navegador nunca guarda automaticamente por segurança).
+        </p>
+      </div>`;
+    $('#setSharedProvider').value = SETTINGS.sharedFolderProvider;
+    $('#setRootFolderName').value = SETTINGS.sharedFolderRootName;
+    $('#setSharedLink').value = SETTINGS.sharedFolderLink;
+    $('#saveLinkBtn').addEventListener('click', async ()=>{
+      await saveSetting('sharedFolderProvider', $('#setSharedProvider').value);
+      await saveSetting('sharedFolderRootName', $('#setRootFolderName').value.trim() || 'Travel Cost');
+      await saveSetting('sharedFolderLink', $('#setSharedLink').value.trim());
+      toast('Link salvo neste dispositivo');
+      updateSyncPill();
+    });
+    $('#openLinkBtn').addEventListener('click', ()=>{
+      if(SETTINGS.sharedFolderLink) window.open(SETTINGS.sharedFolderLink, '_blank');
+      else toast('Nenhum link salvo ainda');
+    });
+    const linkBtn = $('#linkFolderBtn');
+    if(linkBtn){
+      linkBtn.addEventListener('click', async ()=>{
+        const r = await pickLocalFolder();
+        if(r.ok){ toast('Pasta vinculada', 'Novas viagens já criam a estrutura de pastas automaticamente aqui.'); updateSyncPill(); paintSettingsTab('armazenamento'); }
+        else toast('Não foi possível vincular a pasta', 'A seleção foi cancelada ou a permissão foi negada.');
+      });
+    }
+    const reconnectBtn = $('#reconnectFolderBtn');
+    if(reconnectBtn){
+      reconnectBtn.addEventListener('click', async ()=>{
+        const r = await reconnectLocalFolder();
+        if(r.ok){ toast('Pasta reconectada', 'A mesma pasta continua vinculada — nada foi duplicado.'); updateSyncPill(); paintSettingsTab('armazenamento'); }
+        else toast('Não foi possível reconectar', 'Permissão negada. Use "Trocar pasta vinculada" se preferir escolher de novo.');
+      });
+    }
+  }
+  else if(tab==='centros'){ await paintCostCentersSettings(el); }
+  else if(tab==='pagamentos'){ await paintPaymentMethodsSettings(el); }
+  else if(tab==='privacidade'){
+    el.innerHTML = `
+      <div class="card">
+        <p style="font-size:.85rem; color:var(--color-text-secondary);">O Travel Cost armazena apenas os dados necessários. Números completos de cartão, CVV e senhas nunca são solicitados ou salvos.</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="exportJsonBtn"><i class="bi bi-download"></i> Exportar backup (JSON)</button>
+          <label class="btn btn-secondary" for="importJsonInput"><i class="bi bi-upload"></i> Restaurar backup</label>
+          <input type="file" id="importJsonInput" accept="application/json,.json" class="hidden">
+        </div>
+        <p style="font-size:.78rem; color:var(--color-text-secondary); margin-top:8px;">O backup leva viagens, despesas, centros de custo, formas de pagamento e configurações (inclusive o link da pasta compartilhada). Ele não leva os arquivos em si (fotos e comprovantes) nem a permissão de gravação na pasta local — isso é específico de cada dispositivo.</p>
+        <div style="height:10px;"></div>
+        <button class="btn btn-danger" id="wipeBtn"><i class="bi bi-trash"></i> Limpar dados locais</button>
+      </div>`;
+    $('#exportJsonBtn').addEventListener('click', exportBackupJson);
+    $('#importJsonInput').addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      confirmDialog('Restaurar este backup?', `Isso mesclará os dados de "${file.name}" com o que já existe neste dispositivo. Viagens e despesas com o mesmo ID serão substituídas pela versão do backup.`, ()=>importBackupJson(file));
+      e.target.value='';
+    });
+    $('#wipeBtn').addEventListener('click', ()=>{
+      confirmDialog('Limpar todos os dados locais?', 'Isso removerá permanentemente viagens, despesas e configurações deste dispositivo. Exporte um backup antes, se necessário.', async ()=>{
+        indexedDB.deleteDatabase(DB_NAME);
+        toast('Dados apagados'); setTimeout(()=>location.reload(), 600);
+      });
+    });
+  }
+  else if(tab==='app'){
+    el.innerHTML = `
+      <div class="card settings-list">
+        <div class="item"><div class="t">Versão</div><div class="d">1.0.0 — Travel Cost Premium</div></div>
+        <div class="item"><div><div class="t">Instalar aplicativo</div><div class="d">Adicione o Travel Cost à tela inicial</div></div><button class="btn btn-secondary btn-sm" id="installBtn">Instalar</button></div>
+      </div>
+      <div class="card" style="margin-top:12px; font-size:.85rem; color:var(--color-text-secondary);">
+        <b>Android/Chrome:</b> toque em ⋮ → "Instalar aplicativo".<br>
+        <b>iPhone/iPad (Safari):</b> toque em Compartilhar → "Adicionar à Tela de Início".<br>
+        <b>Desktop (Chrome/Edge):</b> clique no ícone de instalação na barra de endereço.
+      </div>`;
+    $('#installBtn').addEventListener('click', async ()=>{
+      if(window.deferredInstallPrompt){ window.deferredInstallPrompt.prompt(); }
+      else toast('Use o menu do navegador', 'Veja as instruções específicas abaixo.');
+    });
+  }
+}
+async function exportBackupJson(){
+  const [trips, expenses, costCenters, paymentMethods, memories] = await Promise.all([dbGetAll('trips'),dbGetAll('expenses'),dbGetAll('costCenters'),dbGetAll('paymentMethods'),dbGetAll('memories')]);
+  // Exclui o handle de pasta local (não é serializável e é específico deste dispositivo)
+  // e os blobs de mídia das memórias (arquivos ficam só localmente/pasta vinculada).
+  const {localFolderHandle, ...exportableSettings} = SETTINGS;
+  const memoriesMeta = memories.map(({blob, ...rest}) => rest);
+  const attachments = await dbGetAll('attachments');
+  const attachmentsMeta = attachments.map(({blob, ...rest}) => rest);
+  const data = {version:1, exportedAt:nowIso(), trips, expenses, costCenters, paymentMethods, memoriesMeta, attachmentsMeta, settings:exportableSettings};
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download = `backup_travelcost_${todayISODate()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup exportado', 'Arquivos (fotos/comprovantes) não vão no JSON — mantenha a pasta vinculada como fonte deles.');
+}
+async function importBackupJson(file){
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    for(const t of data.trips||[]) await dbPut('trips', t);
+    for(const e of data.expenses||[]) await dbPut('expenses', e);
+    for(const c of data.costCenters||[]) await dbPut('costCenters', c);
+    for(const p of data.paymentMethods||[]) await dbPut('paymentMethods', p);
+    if(data.settings){
+      for(const [key, value] of Object.entries(data.settings)){
+        if(key==='localFolderHandle') continue; // nunca restaurado — é específico do dispositivo de origem
+        await saveSetting(key, value);
+      }
+    }
+    toast('Backup restaurado', `${(data.trips||[]).length} viagens, ${(data.expenses||[]).length} despesas.`);
+    applyTheme(); applyFontSize(); applyFontFamily(); updateSyncPill();
+    navigate('dashboard');
+  }catch(err){
+    toast('Não foi possível restaurar', 'Verifique se o arquivo é um backup JSON válido do Travel Cost.');
+  }
+}
+
+/* ---------------- Cost centers management ---------------- */
+async function paintCostCentersSettings(el){
+  const list = await dbGetAll('costCenters');
+  el.innerHTML = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><div style="font-weight:600;">Centros de custo</div><button class="btn btn-secondary btn-sm" id="ccNewBtn"><i class="bi bi-plus-lg"></i> Novo</button></div><div id="ccMgmtList"></div></div>`;
+  $('#ccNewBtn').addEventListener('click', ()=>openCCModal());
+  const wrap = $('#ccMgmtList');
+  wrap.innerHTML = list.map(c=>`
+    <div class="mgmt-row"><div class="ic">${c.icon||'🔖'}</div><div class="info"><div class="t">${escapeHtml(c.name)}</div></div>
+      <div class="acts"><button class="btn btn-secondary btn-sm" data-e="${c.id}"><i class="bi bi-pencil"></i></button><button class="btn btn-danger btn-sm" data-d="${c.id}"><i class="bi bi-trash"></i></button></div></div>`).join('');
+  wrap.querySelectorAll('[data-e]').forEach(b=>b.addEventListener('click', async ()=>openCCModal(await dbGet('costCenters', b.dataset.e))));
+  wrap.querySelectorAll('[data-d]').forEach(b=>b.addEventListener('click', ()=>{
+    confirmDialog('Excluir centro de custo?', 'Despesas já lançadas manterão a referência.', async ()=>{ await dbDelete('costCenters', b.dataset.d); paintSettingsTab('centros'); });
+  }));
+}
+function openCCModal(cc){
+  $('#ccModalTitle').textContent = cc? 'Editar centro de custo':'Novo centro de custo';
+  $('#ccId').value = cc?.id||''; $('#ccName').value = cc?.name||''; $('#ccIcon').value = cc?.icon||'';
+  openModal('modalCC');
+}
+$('#ccForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const id = $('#ccId').value || uuid();
+  await dbPut('costCenters', {id, name:$('#ccName').value.trim(), icon:$('#ccIcon').value.trim(), active:true, createdAt:nowIso()});
+  closeModal('modalCC'); toast('Centro de custo salvo'); paintSettingsTab('centros');
+});
+
+/* ---------------- Payment methods management ---------------- */
+async function paintPaymentMethodsSettings(el){
+  const list = await dbGetAll('paymentMethods');
+  el.innerHTML = `<div class="card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><div style="font-weight:600;">Formas de pagamento</div><button class="btn btn-secondary btn-sm" id="pmNewBtn"><i class="bi bi-plus-lg"></i> Nova</button></div><div id="pmMgmtList"></div></div>`;
+  $('#pmNewBtn').addEventListener('click', ()=>openPMModal());
+  const wrap = $('#pmMgmtList');
+  const icon = {credito:'💳',debito:'💳',pix:'🏦',dinheiro:'💵',voucher:'🎫'};
+  wrap.innerHTML = list.map(p=>`
+    <div class="mgmt-row"><div class="ic">${icon[p.type]||'💳'}</div><div class="info"><div class="t">${escapeHtml(pmLabel(p))}</div><div class="d">${escapeHtml(p.bank||'')}</div></div>
+      <div class="acts"><button class="btn btn-secondary btn-sm" data-e="${p.id}"><i class="bi bi-pencil"></i></button><button class="btn btn-danger btn-sm" data-d="${p.id}"><i class="bi bi-trash"></i></button></div></div>`).join('');
+  wrap.querySelectorAll('[data-e]').forEach(b=>b.addEventListener('click', async ()=>openPMModal(await dbGet('paymentMethods', b.dataset.e))));
+  wrap.querySelectorAll('[data-d]').forEach(b=>b.addEventListener('click', ()=>{
+    confirmDialog('Excluir forma de pagamento?', 'Despesas já lançadas manterão a referência.', async ()=>{ await dbDelete('paymentMethods', b.dataset.d); paintSettingsTab('pagamentos'); });
+  }));
+}
+function openPMModal(pm){
+  $('#pmModalTitle').textContent = pm? 'Editar forma de pagamento':'Nova forma de pagamento';
+  $('#pmId').value = pm?.id||''; $('#pmType').value = pm?.type||'credito'; $('#pmNickname').value = pm?.nickname||'';
+  $('#pmBank').value = pm?.bank||''; $('#pmBrand').value = pm?.brand||''; $('#pmLast4').value = pm?.last4||'';
+  toggleCardFields(); openModal('modalPM');
+}
+function toggleCardFields(){
+  const isCard = ['credito','debito'].includes($('#pmType').value);
+  $('#pmCardFields').style.display = isCard ? 'block':'none';
+}
+$('#pmType').addEventListener('change', toggleCardFields);
+$('#pmForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const id = $('#pmId').value || uuid();
+  await dbPut('paymentMethods', {id, type:$('#pmType').value, nickname:$('#pmNickname').value.trim(), bank:$('#pmBank').value.trim(), brand:$('#pmBrand').value.trim(), last4:$('#pmLast4').value.trim(), active:true, createdAt:nowIso()});
+  closeModal('modalPM'); toast('Forma de pagamento salva'); paintSettingsTab('pagamentos');
+});
+
+/* ---------------- Onboarding ---------------- */
+const ONB_STEPS = [
+  {title:'Bem-vindo ao Travel Cost', text:'Controle os custos das suas viagens com facilidade, mesmo offline.', icon:'bi-airplane-fill'},
+  {title:'Funciona sem internet', text:'Crie viagens e registre despesas a qualquer momento — tudo é salvo neste dispositivo.', icon:'bi-cloud-slash'},
+  {title:'Escolha um tema', text:'Claro, escuro ou seguindo o sistema. Você pode mudar quando quiser.', icon:'bi-palette'},
+  {title:'Pronto para começar', text:'Vamos criar sua primeira viagem?', icon:'bi-suitcase'}
+];
+let onbIndex = 0;
+function renderOnb(){
+  const s = ONB_STEPS[onbIndex];
+  $('#onbBody').innerHTML = `<div class="mark"><i class="bi ${s.icon}"></i></div><h2 style="margin-bottom:8px;">${s.title}</h2><p style="color:var(--color-text-secondary); max-width:320px;">${s.text}</p>`;
+  $('#onbDots').innerHTML = ONB_STEPS.map((_,i)=>`<span class="${i===onbIndex?'active':''}"></span>`).join('');
+  $('#onbNext').textContent = onbIndex===ONB_STEPS.length-1 ? 'Criar viagem' : 'Continuar';
+}
+$('#onbNext').addEventListener('click', async ()=>{
+  if(onbIndex < ONB_STEPS.length-1){ onbIndex++; renderOnb(); }
+  else{ await finishOnboarding(); openTripModal(); }
+});
+$('#onbSkip').addEventListener('click', finishOnboarding);
+async function finishOnboarding(){
+  await saveSetting('onboardingDone', true);
+  $('#onboarding').classList.add('hidden');
+}
+
+/* ---------------- PWA install prompt ---------------- */
+window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); window.deferredInstallPrompt = e; });
+
+/* ---------------- Init ---------------- */
+async function init(){
+  await openDB();
+  await loadSettings();
+  await seedIfEmpty();
+  applyTheme(); applyFontSize(); applyFontFamily();
+  updateSyncPill();
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ if(SETTINGS.theme==='system') applyTheme(); });
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* hospedagem sem HTTPS/local pode bloquear SW */ });
+  }
+
+  if(!SETTINGS.onboardingDone){
+    $('#onboarding').classList.remove('hidden'); onbIndex=0; renderOnb();
+  }
+  navigate('dashboard');
+}
+init();
+</script>
+</body>
+</html>
