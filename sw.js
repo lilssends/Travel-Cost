@@ -1,6 +1,6 @@
 // Travel Cost Premium — Service Worker
 // Cache-first para o "app shell", permitindo funcionamento 100% offline.
-const CACHE_NAME = 'travel-cost-v2';
+const CACHE_NAME = 'travel-cost-v3';
 const SHELL_FILES = [
   './',
   './index.html',

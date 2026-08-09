@@ -4,6 +4,23 @@ App PWA, offline-first, para registrar e controlar custos de viagens e passeios.
 
 ## Correções desta versão
 
+**v2.2**
+
+4. **Reconexão da pasta em 1 toque, de qualquer tela.** Antes era preciso ir
+   até Configurações › Armazenamento para reconectar. Agora a própria pilha
+   de status no topo (ao lado da lupa) já reconecta com um único toque quando
+   mostra "Toque aqui para reconectar a pasta" — reusa o mesmo handle salvo,
+   sem abrir o seletor de novo. Importante: por segurança, **nenhum
+   navegador** permite reconceder permissão de gravação de arquivos sem um
+   toque explícito do usuário — não existe "automático de verdade" aqui, mas
+   agora é só 1 toque em vez de navegar até as configurações.
+5. **Memórias agora têm ordenação**, igual às Despesas: por data da captura,
+   data de adição, nome ou tipo, crescente/decrescente, com a preferência
+   salva.
+6. Versão exibida em Configurações › Aplicativo atualizada para **2.2**.
+
+**v2.1 (anterior)**
+
 1. **Pasta duplicada ao vincular pasta local.** Antes, o app sempre criava uma
    subpasta chamada "Travel Cost" dentro da pasta escolhida em "Vincular
    pasta local" — então, se você já tinha escolhido a própria pasta "Travel

@@ -627,6 +627,7 @@ function dbGetByIndex(storeName, indexName, value){
 const DEFAULT_SETTINGS = {
   theme:'system', fontFamily:'Montserrat', fontSize:'normal',
   expenseSort:'movementDate', expenseSortDir:'desc',
+  memorySort:'capturedAt', memorySortDir:'desc',
   cloudProvider:'none', deviceId:null, onboardingDone:false, fontsCached:{},
   sharedFolderProvider:'none', sharedFolderLink:'', sharedFolderRootName:'Travel Cost',
   localFolderLinked:false
@@ -810,10 +811,27 @@ async function updateSyncPill(){
   // Handle salvo mas sem permissão ativa nesta sessão (comum após reabrir o navegador).
   // Isso NÃO significa que a pasta foi esquecida — só precisa reconectar em Config.
   const storedHandle = await getStoredFolderHandleRaw();
-  if(storedHandle){ dot.className='sync-dot pending'; label.textContent='Pasta vinculada — toque em Config. para reconectar'; return; }
+  if(storedHandle){ dot.className='sync-dot pending'; label.textContent='Toque aqui para reconectar a pasta'; return; }
   if(SETTINGS.sharedFolderLink){ dot.className='sync-dot pending'; label.textContent='Link salvo (sem gravação automática)'; return; }
   dot.className='sync-dot'; label.textContent='Somente neste dispositivo';
 }
+// Um toque na pilha do topo já tenta reconectar a pasta vinculada (reusa o mesmo
+// handle salvo, sem abrir o seletor de novo). É o mais "automático" que o navegador
+// permite: por segurança, nenhum navegador deixa reconceder permissão de gravação
+// sem um toque explícito do usuário — mas aqui basta esse único toque, de qualquer tela.
+$('#syncPill').addEventListener('click', async ()=>{
+  const activeFolder = await peekLocalFolderHandle();
+  const storedHandle = await getStoredFolderHandleRaw();
+  if(!activeFolder && storedHandle){
+    const r = await reconnectLocalFolder();
+    if(r.ok) toast('Pasta reconectada', 'Gravação automática reativada — mesma pasta de antes.');
+    else toast('Não foi possível reconectar', 'Toque em Config. › Armazenamento para vincular novamente.');
+    updateSyncPill();
+    return;
+  }
+  navigate('settings');
+  setTimeout(()=>{ $('#view-settings [data-stab="armazenamento"]')?.click(); }, 0);
+});
 window.addEventListener('online', updateSyncPill);
 window.addEventListener('offline', updateSyncPill);
 
@@ -1246,6 +1264,13 @@ async function renderMemoriesTab(content, trip){
         <button class="chip" data-f="photo">Fotos</button>
         <button class="chip" data-f="video">Vídeos</button>
       </div>
+      <select class="input" id="memSortSelect" style="max-width:170px;">
+        <option value="capturedAt">Data da captura</option>
+        <option value="createdAt">Data de adição</option>
+        <option value="fileName">Nome</option>
+        <option value="type">Tipo</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" id="memSortDirBtn"><i class="bi bi-sort-down"></i></button>
       <div class="spacer" style="flex:1;"></div>
       <label class="btn btn-secondary btn-sm" for="memCameraPhoto"><i class="bi bi-camera"></i> Foto</label>
       <input type="file" id="memCameraPhoto" accept="image/*" capture="environment" class="hidden">
@@ -1267,6 +1292,17 @@ async function renderMemoriesTab(content, trip){
     $$('#memFilterChips .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active');
     paintMemories(trip, c.dataset.f);
   }));
+  $('#memSortSelect').value = SETTINGS.memorySort;
+  updateMemSortDirIcon();
+  $('#memSortSelect').addEventListener('change', async (e)=>{
+    await saveSetting('memorySort', e.target.value);
+    paintMemories(trip, $('#memFilterChips .chip.active')?.dataset.f || 'all');
+  });
+  $('#memSortDirBtn').addEventListener('click', async ()=>{
+    await saveSetting('memorySortDir', SETTINGS.memorySortDir==='asc'?'desc':'asc');
+    updateMemSortDirIcon();
+    paintMemories(trip, $('#memFilterChips .chip.active')?.dataset.f || 'all');
+  });
   let burstCount = 0;
   const burstCounterEl = $('#memBurstCounter');
   $('#memCameraPhoto').addEventListener('change', async (e)=>{
@@ -1319,13 +1355,23 @@ async function saveMemoryFile(trip, file){
   toast(type==='photo' ? 'Foto salva' : 'Vídeo salvo', written.ok ? 'Gravado na pasta vinculada.' : 'Aguardando: vincule uma pasta para gravar automaticamente.');
 }
 
+function updateMemSortDirIcon(){
+  $('#memSortDirBtn').innerHTML = SETTINGS.memorySortDir==='asc' ? '<i class="bi bi-sort-up"></i>' : '<i class="bi bi-sort-down"></i>';
+}
 const memoryObjectUrls = new Map();
 async function paintMemories(trip, filter){
   const grid = $('#memGrid');
   let memories = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt);
   if(filter==='photo') memories = memories.filter(m=>m.type==='photo');
   if(filter==='video') memories = memories.filter(m=>m.type==='video');
-  memories.sort((a,b)=> new Date(b.capturedAt) - new Date(a.capturedAt));
+  const sortKey = SETTINGS.memorySort;
+  const dir = SETTINGS.memorySortDir==='asc' ? 1 : -1;
+  memories.sort((a,b)=>{
+    let av = a[sortKey], bv = b[sortKey];
+    if(sortKey==='capturedAt' || sortKey==='createdAt'){ av = new Date(av||0); bv = new Date(bv||0); }
+    else { av = (av||'').toString().toLowerCase(); bv = (bv||'').toString().toLowerCase(); }
+    if(av<bv) return -1*dir; if(av>bv) return 1*dir; return 0;
+  });
   const photoCount = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt && m.type==='photo').length;
   const videoCount = (await dbGetByIndex('memories','tripId',trip.id)).filter(m=>!m.deletedAt && m.type==='video').length;
   $('#memCountsLine').textContent = `📷 ${photoCount} fotos · 🎥 ${videoCount} vídeos`;
@@ -1742,7 +1788,7 @@ async function paintSettingsTab(tab){
   else if(tab==='app'){
     el.innerHTML = `
       <div class="card settings-list">
-        <div class="item"><div class="t">Versão</div><div class="d">1.0.0 — Travel Cost Premium</div></div>
+        <div class="item"><div class="t">Versão</div><div class="d">2.2 — Travel Cost Premium</div></div>
         <div class="item"><div><div class="t">Instalar aplicativo</div><div class="d">Adicione o Travel Cost à tela inicial</div></div><button class="btn btn-secondary btn-sm" id="installBtn">Instalar</button></div>
       </div>
       <div class="card" style="margin-top:12px; font-size:.85rem; color:var(--color-text-secondary);">
